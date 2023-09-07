@@ -22,10 +22,11 @@ if is_cuda:
 else:
     device = torch.device("cpu")
 
+joint_dims = 66
 seq_len = 4
 
-dataset = mogaze_utils.read_from_folder("../mogaze_data")
-print(dataset)
+dataset = mogaze_utils.read_from_folder("../mogaze_data/")
+# print(dataset)
 data = mogaze_utils.downsample_data(dataset)
 data = np.array(mogaze_utils.sequences_from_framedata(data[0], seq_len))
 
@@ -36,10 +37,10 @@ data = np.array(mogaze_utils.sequences_from_framedata(data[0], seq_len))
 # target_seq = torch.Tensor(target_seq)
 
 batch_size = data[0][0].shape[0]//200
-print(data[0][0].shape)
+# print(data[0][0].shape)
 
 # Instantiate the model with hyperparameters
-model = Recurrent_Model(input_size=seq_len, output_size=seq_len, hidden_dim=12, n_layers=1)
+model = Recurrent_Model(input_size=joint_dims, output_size=joint_dims, hidden_dim=1, n_layers=2)
 # We'll also set the model to the device that we defined earlier (default is CPU)
 model = model.to(device)
 
@@ -48,29 +49,35 @@ n_epochs = 100
 lr=0.01
 
 # Define Loss, Optimizer
-criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-input_seq = torch.from_numpy(data[0][0])
-target_seq = torch.Tensor(data[0][1])
+x = torch.from_numpy(data[0][0])
+y = torch.Tensor(data[0][1])
 
-print(input_seq.shape)
-print(target_seq.shape)
+x_train, x_test, x_validate = torch.utils.data.random_split(x, [0.4, 0.3, 0.3])
+y_train, y_test, y_validate = torch.utils.data.random_split(y, [0.4, 0.3, 0.3])
+
+# Implement Dataset and Dataloader in dataset_mogaze.py
+train_loader = DataLoader(x_train, batch_size, num_workers=0, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=1, num_workers=0, shuffle=False)
 
 # Training Run
-input_seq = input_seq.to(device)
+input_seq = x_input.to(device)
 for epoch in range(1, n_epochs + 1):
     optimizer.zero_grad() # Clears existing gradients from previous epoch
     #input_seq = input_seq.to(device)
     output, hidden = model(input_seq.float())
     output = output.to(device)
-    target_seq = target_seq.to(device)
-    print(output.shape)
-    loss = criterion(output, target_seq.view(-1).long())
+    target_seq = y_input.to(device)
+    loss = criterion(output, target_seq)
     loss.backward() # Does backpropagation and calculates gradients
     optimizer.step() # Updates the weights accordingly
-    
+
     if epoch%10 == 0:
         print('Epoch: {}/{}.............'.format(epoch, n_epochs), end=' ')
         print("Loss: {:.4f}".format(loss.item()))
+        
+        test_output = model(x_test.float())
+        print('test loss: ', criterion(test_output, y_test))
 

@@ -10,20 +10,18 @@ def read_from_file(hdf_path):
     Read the data from a .hdf5 file into a numpy array and return it.
     @hdf_path: The string pathname of the specified .hdf5 file.
     """
-    print(hdf_path)
     with h5py.File(hdf_path, 'r') as f:
         group_keys = list(f.keys())
         # data = f.get('data')
         data = f.get(group_keys[0])
         return np.array(data)
 
-def read_from_folder(folder_path="../mogaze_utils/"):
+def read_from_folder(folder_path="../mogaze_data/"):
     """
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
-    @folder_path: The string pathname of the folder.
+    @folder_path: The string pathname of the folder. Ends in /
     """
     human_data_paths = glob.glob(folder_path + "*human_data.hdf5")
-    # print(human_data_paths)
     data_set = [read_from_file(path) for path in human_data_paths]
     return data_set
 
@@ -59,8 +57,8 @@ def sequence_from_array(array, seq_len, target_offset):
         # the assumption here is that the input and target sequence lengths are equal
         target_sequence = [array[step+i+target_offset] for i in range(seq_len)]
         
-        input_sequence = np.array(input_sequence).T
-        target_sequence = np.array(target_sequence).T
+        input_sequence = np.array(input_sequence)
+        target_sequence = np.array(target_sequence)
 
         input_sequences.append(input_sequence)
         target_sequences.append(target_sequence)
@@ -94,7 +92,7 @@ def sanity_check():
     assert type(dataset[0]) == np.ndarray
 
     data = downsample_data(dataset)
-    data = np.array(sequences_from_framedata(data[0]))
+    data = np.array(sequences_from_framedata(data[0], 3))
     print(data.shape)
 
 # sanity_check()

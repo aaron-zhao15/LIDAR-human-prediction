@@ -76,13 +76,15 @@ class Recurrent_Model(nn.Module):
 
         #Defining the layers
         # RNN Layer
-        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True)   
+        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True, dropout=0.2)   
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_size)
     
     def forward(self, x):
         
         batch_size = x.size(0)
+        seq_len = x.size(1)
+        joint_dims = x.size(2)
 
         #Initializing hidden state for first input using method defined below
         hidden = self.init_hidden(batch_size)
@@ -94,13 +96,14 @@ class Recurrent_Model(nn.Module):
         # Reshaping the outputs such that it can be fit into the fully connected layer
         out = out.contiguous().view(-1, self.hidden_dim)
         out = self.fc(out)
+        out = out.reshape((batch_size, seq_len, joint_dims))
         
         return out, hidden
     
     def init_hidden(self, batch_size):
         # This method generates the first hidden state of zeros which we'll use in the forward pass
         hidden = torch.zeros(self.n_layers, batch_size, self.hidden_dim).to(device)
-         # We'll send the tensor holding the hidden state to the device we specified earlier as well
+        # We'll send the tensor holding the hidden state to the device we specified earlier as well
         return hidden
 
 
