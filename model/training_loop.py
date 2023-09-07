@@ -24,7 +24,8 @@ else:
 
 seq_len = 4
 
-dataset = mogaze_utils.read_from_folder()
+dataset = mogaze_utils.read_from_folder("../mogaze_data")
+print(dataset)
 data = mogaze_utils.downsample_data(dataset)
 data = np.array(mogaze_utils.sequences_from_framedata(data[0], seq_len))
 

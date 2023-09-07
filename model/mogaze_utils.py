@@ -10,13 +10,14 @@ def read_from_file(hdf_path):
     Read the data from a .hdf5 file into a numpy array and return it.
     @hdf_path: The string pathname of the specified .hdf5 file.
     """
+    print(hdf_path)
     with h5py.File(hdf_path, 'r') as f:
         group_keys = list(f.keys())
         # data = f.get('data')
         data = f.get(group_keys[0])
         return np.array(data)
 
-def read_from_folder(folder_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/mogaze/"):
+def read_from_folder(folder_path="../mogaze_utils/"):
     """
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
     @folder_path: The string pathname of the folder.
@@ -76,7 +77,7 @@ def sequences_from_framedata(dataset, seq_len, target_offset=2):
     else:
         return [sequence_from_array(data, seq_len, target_offset) for data in dataset]
 
-def write_seq_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/mogaze/sequences/"):
+def write_seq_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/mogaze_data/sequences/"):
     """
     Write a list of input-target sequence pairs to some file path. This method doesn't preserve info about the
     original name identifier, so it should really only be used for temporary data storage. Serves as a kind of
