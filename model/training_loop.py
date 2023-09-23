@@ -2,6 +2,7 @@ import time
 import numpy as np
 import logging
 import mogaze_utils
+from MogazeDataset import MogazeDataset
 
 from sklearn.model_selection import KFold
 
@@ -25,10 +26,14 @@ else:
 joint_dims = 66
 seq_len = 4
 
-dataset = mogaze_utils.read_from_folder("../mogaze_data/")
+joint_posns = mogaze_utils.read_from_file("../mogaze_data/p1_1_human_data.hdf5")
+joint_vels = mogaze_utils.get_velocities(joint_posns)
+joint_posns = joint_posns[:-1]
+[input_seqs, target_seqs] = mogaze_utils.sequence_from_array(joint_posns, 4, 3)
+[input_vel_seqs, target_vel_seqs] = mogaze_utils.sequence_from_array(joint_vels, 4, 3)
+
+dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 # print(dataset)
-data = mogaze_utils.downsample_data(dataset)
-data = np.array(mogaze_utils.sequences_from_framedata(data[0], seq_len))
 
 # from dataset, downsample to every 20 frames so dt = 20 frames. then the input seq should be timesteps [i, i+1, i+2]
 # starting from timestep i. From an input seq of [i, i+1, i+2], the target_seq should be timesteps [i+2, i+3, i+4].
@@ -36,11 +41,10 @@ data = np.array(mogaze_utils.sequences_from_framedata(data[0], seq_len))
 # input_seq = torch.from_numpy(input_seq)
 # target_seq = torch.Tensor(target_seq)
 
-batch_size = data[0][0].shape[0]//200
-# print(data[0][0].shape)
+batch_size = 64
 
 # Instantiate the model with hyperparameters
-model = Recurrent_Model(input_size=joint_dims, output_size=joint_dims, hidden_dim=1, n_layers=2)
+model = Recurrent_Model(input_size=(joint_dims, joint_dims), output_size=joint_dims, hidden_dim=100, n_layers=2)
 # We'll also set the model to the device that we defined earlier (default is CPU)
 model = model.to(device)
 
@@ -52,11 +56,11 @@ lr=0.01
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-x = torch.from_numpy(data[0][0])
-y = torch.Tensor(data[0][1])
+x = (dataset.input_seqs, dataset.input_vels)
+y = (dataset.target_seqs, dataset.target_vels)
 
-x_train, x_test, x_validate = torch.utils.data.random_split(x, [0.4, 0.3, 0.3])
-y_train, y_test, y_validate = torch.utils.data.random_split(y, [0.4, 0.3, 0.3])
+x_train, x_test, x_validate = torch.utils.data.random_split(x, [0.6, 0.2, 0.2])
+y_train, y_test, y_validate = torch.utils.data.random_split(y, [0.6, 0.2, 0.2])
 
 # Implement Dataset and Dataloader in dataset_mogaze.py
 train_loader = DataLoader(x_train, batch_size, num_workers=0, shuffle=True)

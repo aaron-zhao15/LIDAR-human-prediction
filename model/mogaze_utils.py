@@ -12,7 +12,8 @@ def read_from_file(hdf_path):
     """
     with h5py.File(hdf_path, 'r') as f:
         group_keys = list(f.keys())
-        # data = f.get('data')
+        items = f.attrs.items()
+        # print(f['data'].attrs['description'])
         data = f.get(group_keys[0])
         return np.array(data)
 
@@ -26,8 +27,15 @@ def read_from_folder(folder_path="../mogaze_data/"):
     return data_set
 
 
+def get_velocities(joint_positions, dt=1/120):
+    if type(joint_positions) == np.ndarray:
+        return (joint_positions[1:]-joint_positions[:-1])/dt
+    else:
+        return [(data[1:]-data[:-1])/dt for data in joint_positions]
+
 def downsample_data(dataset, frequency=20):
     """
+    Avoid using this method, use step size in sequence_from_array to perform downsampling.
     Take as input, either a numpy array or a list of numpy arrays and downsample to every 20 datapoints.
     @dataset: The dataset, either on its own or a list of other datasets.
     @frequency: Frequency of sampling points. Units are frames/second.
@@ -39,23 +47,24 @@ def downsample_data(dataset, frequency=20):
         return [data[::frequency] for data in dataset]
 
 
-def sequence_from_array(array, seq_len, target_offset):
+def sequence_from_array(data_array, seq_len, target_offset, step_size=20):
     """
     For implementation, avoid using this method and instead use sequences_from_framedata for consistent type handling.
 
     From a single array of data, parse the sequential data into tuples of sequences, (input_seq, target_seq).
     There's an assumption made, that the input and target sequence lengths are both equal. If the use case
     requires a different length for each sequence, a different method needs to be used.
-    @array: The data in the form of a numpy ndarray.
+    @joint_positions: The data in the form of a numpy ndarray.
     @seq_len: The length of the input and target sequences.
     @target_offset: How far the target sequence is shifted from the start of the input sequence. You can think
     about this as how many time steps into the future are we modeling.
+    @step_size: step size is used to specify the frequency of sampling.
     """
     input_sequences, target_sequences = [], []
-    for step in range(len(array)-(seq_len-1)-target_offset):
-        input_sequence = [array[step+i] for i in range(seq_len)]
+    for start_index in range(len(data_array)-((seq_len-1)+target_offset)*step_size):
+        input_sequence = [data_array[start_index+(i)*step_size] for i in range(seq_len)]
         # the assumption here is that the input and target sequence lengths are equal
-        target_sequence = [array[step+i+target_offset] for i in range(seq_len)]
+        target_sequence = [data_array[start_index+(i+target_offset)*step_size] for i in range(seq_len)]
         
         input_sequence = np.array(input_sequence)
         target_sequence = np.array(target_sequence)
@@ -64,7 +73,7 @@ def sequence_from_array(array, seq_len, target_offset):
         target_sequences.append(target_sequence)
     return [input_sequences, target_sequences]
 
-def sequences_from_framedata(dataset, seq_len, target_offset=2):
+def sequences_from_framedata(dataset, seq_len, target_offset=3):
     """
     Generalized form of sequence_from_array, which can handle both a singular data array or a list of data 
     arrays. The important part is this method returns the input and target sequences in list form.
@@ -87,13 +96,20 @@ def write_seq_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/L
 
 
 def sanity_check():
-    dataset = read_from_folder()
-    assert type(dataset) == list
-    assert type(dataset[0]) == np.ndarray
+    # dataset = read_from_folder()
+    # assert type(dataset) == list
+    # assert type(dataset[0]) == np.ndarray
 
-    data = downsample_data(dataset)
-    data = np.array(sequences_from_framedata(data[0], 3))
-    print(data.shape)
+    joint_posns = read_from_file("../mogaze_data/p1_1_human_data.hdf5")
+    joint_vels = get_velocities(joint_posns)
+    print(len(joint_vels))
+    print(len(joint_posns))
+
+    [input_sequence, target_sequence] = sequence_from_array(joint_posns, 4, 3)
+    print(np.array(input_sequence).shape)
+    print(np.array(target_sequence).shape)
+    print(input_sequence[3*20] == target_sequence[0])
+    # print(data.shape)
 
 # sanity_check()
 
