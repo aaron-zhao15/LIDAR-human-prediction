@@ -4,8 +4,6 @@ import logging
 import mogaze_utils
 from MogazeDataset import MogazeDataset
 
-from sklearn.model_selection import KFold
-
 from models import *
 
 import torch
@@ -44,44 +42,67 @@ dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs
 batch_size = 64
 
 # Instantiate the model with hyperparameters
-model = Recurrent_Model(input_size=(joint_dims, joint_dims), output_size=joint_dims, hidden_dim=100, n_layers=2)
+model = GRUNet(input_size=joint_dims*2, output_size=joint_dims, hidden_dim=100, n_layers=2)
 # We'll also set the model to the device that we defined earlier (default is CPU)
 model = model.to(device)
 
 # Define hyperparameters
-n_epochs = 100
-lr=0.01
+n_epochs = 10
+lr=0.1
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-x = (dataset.input_seqs, dataset.input_vels)
-y = (dataset.target_seqs, dataset.target_vels)
-
-x_train, x_test, x_validate = torch.utils.data.random_split(x, [0.6, 0.2, 0.2])
-y_train, y_test, y_validate = torch.utils.data.random_split(y, [0.6, 0.2, 0.2])
+train, test, validate = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
 
 # Implement Dataset and Dataloader in dataset_mogaze.py
-train_loader = DataLoader(x_train, batch_size, num_workers=0, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=1, num_workers=0, shuffle=False)
+train_loader = DataLoader(train, batch_size=batch_size, num_workers=0, shuffle=True)
+test_loader = DataLoader(test, batch_size=batch_size, num_workers=0, shuffle=True)
+validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shuffle=True)
 
-# Training Run
-input_seq = x_input.to(device)
+epoch_times = []
 for epoch in range(1, n_epochs + 1):
-    optimizer.zero_grad() # Clears existing gradients from previous epoch
-    #input_seq = input_seq.to(device)
-    output, hidden = model(input_seq.float())
-    output = output.to(device)
-    target_seq = y_input.to(device)
-    loss = criterion(output, target_seq)
-    loss.backward() # Does backpropagation and calculates gradients
-    optimizer.step() # Updates the weights accordingly
-
-    if epoch%10 == 0:
-        print('Epoch: {}/{}.............'.format(epoch, n_epochs), end=' ')
-        print("Loss: {:.4f}".format(loss.item()))
+    start_time = time.perf_counter()
+    # h = model.init_hidden(batch_size)
+    avg_loss = 0.
+    counter = 0
+    for x, label in train_loader:
+        counter += 1
+        model.zero_grad()
         
-        test_output = model(x_test.float())
-        print('test loss: ', criterion(test_output, y_test))
+        out, h = model(x.to(device).float())
+        loss = criterion(out, label.to(device).float())
+        loss.backward()
+        optimizer.step()
+        avg_loss += loss.item()
+        if counter%200 == 0:
+            print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), avg_loss/counter))
+    current_time = time.perf_counter()
+    print("Epoch {}/{} Done, Total Loss: {}".format(epoch, n_epochs, avg_loss/len(train_loader)))
+    print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
+    epoch_times.append(current_time-start_time)
+print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
+
+
+
+
+def evaluate(model, test_x, test_y, label_scalers):
+    model.eval()
+    outputs = []
+    targets = []
+    start_time = time.clock()
+    for i in test_x.keys():
+        inp = torch.from_numpy(np.array(test_x[i]))
+        labs = torch.from_numpy(np.array(test_y[i]))
+        h = model.init_hidden(inp.shape[0])
+        out, h = model(inp.to(device).float(), h)
+        outputs.append(label_scalers[i].inverse_transform(out.cpu().detach().numpy()).reshape(-1))
+        targets.append(label_scalers[i].inverse_transform(labs.numpy()).reshape(-1))
+    print("Evaluation Time: {}".format(str(time.clock()-start_time)))
+    sMAPE = 0
+    for i in range(len(outputs)):
+        sMAPE += np.mean(abs(outputs[i]-targets[i])/(targets[i]+outputs[i])/2)/len(outputs)
+    print("sMAPE: {}%".format(sMAPE*100))
+    return outputs, targets, sMAPE
 

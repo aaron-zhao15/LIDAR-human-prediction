@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
-from sklearn.linear_model import RidgeClassifierCV
 import pdb
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
@@ -47,7 +46,7 @@ class Recurrent_GRU(nn.Module):
 
 
 class GRUNet(nn.Module):
-    def __init__(self, input_size, hidden_dim, output_size, n_layers, drop_prob=0.2):
+    def __init__(self, input_size, output_size, hidden_dim, n_layers, drop_prob=0.0):
         super(GRUNet, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
@@ -56,9 +55,15 @@ class GRUNet(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_size)
         self.relu = nn.ReLU()
         
-    def forward(self, x, h):
+    def forward(self, x):
+        batch_size = x.size(0)
+        seq_len = x.size(1)
+        joint_dims = x.size(2)//2
+        #Initializing hidden state for first input using method defined below
+        h = self.init_hidden(batch_size)
         out, h = self.gru(x, h)
-        out = self.fc(self.relu(out[:,-1]))
+        out = self.fc(self.relu(out))
+        out = out.reshape((batch_size, seq_len, joint_dims))
         return out, h
     
     def init_hidden(self, batch_size):
@@ -76,15 +81,16 @@ class Recurrent_Model(nn.Module):
 
         #Defining the layers
         # RNN Layer
-        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True, dropout=0.2)   
+        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True, dropout=0.2)
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_size)
+        self.relu = nn.ReLU()
     
     def forward(self, x):
         
         batch_size = x.size(0)
         seq_len = x.size(1)
-        joint_dims = x.size(2)
+        joint_dims = x.size(2)//2
 
         #Initializing hidden state for first input using method defined below
         hidden = self.init_hidden(batch_size)
@@ -92,6 +98,8 @@ class Recurrent_Model(nn.Module):
         # print(hidden.shape)
         # Passing in the input and hidden state into the model and obtaining outputs
         out, hidden = self.rnn(x, hidden)
+
+        out = self.relu(out)
         
         # Reshaping the outputs such that it can be fit into the fully connected layer
         out = out.contiguous().view(-1, self.hidden_dim)
