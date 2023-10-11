@@ -5,7 +5,7 @@ import numpy as np
 import h5py
 import glob
 
-def read_from_file(hdf_path):
+def read_from_hdf(hdf_path):
     """
     Read the data from a .hdf5 file into a numpy array and return it.
     @hdf_path: The string pathname of the specified .hdf5 file.
@@ -16,14 +16,30 @@ def read_from_file(hdf_path):
         # print(f['data'].attrs['description'])
         data = f.get(group_keys[0])
         return np.array(data)
+    
+def read_from_csv(csv_path):
+    """
+    Read the data from a .txt file into a numpy array and return it.
+    @csv_path: The string pathname of the specified .txt file.
+    """
+    return np.genfromtxt(csv_path, delimiter=',')
 
-def read_from_folder(folder_path="../mogaze_data/"):
+def read_hdf_from_folder(folder_path="../mogaze_data/"):
     """
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
     @folder_path: The string pathname of the folder. Ends in /
     """
     human_data_paths = glob.glob(folder_path + "*human_data.hdf5")
-    data_set = [read_from_file(path) for path in human_data_paths]
+    data_set = [read_from_hdf(path) for path in human_data_paths]
+    return data_set
+
+def read_csv_from_folder(folder_path="../mogaze_data/"):
+    """
+    Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
+    @folder_path: The string pathname of the folder. Ends in /
+    """
+    human_data_paths = glob.glob(folder_path + "*human_data.hdf5")
+    data_set = [read_from_hdf(path) for path in human_data_paths]
     return data_set
 
 
@@ -92,6 +108,11 @@ def write_seq_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/L
     """
     return
 
+def normalize(data):
+    mean = np.mean(data)
+    std = np.std(data)
+    normalized = (data-mean)/std
+    return normalized, (mean, std)
 
 
 
@@ -100,16 +121,20 @@ def sanity_check():
     # assert type(dataset) == list
     # assert type(dataset[0]) == np.ndarray
 
-    joint_posns = read_from_file("../mogaze_data/p1_1_human_data.hdf5")
+    joint_posns = read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
     joint_vels = get_velocities(joint_posns)
     print(len(joint_vels))
     print(len(joint_posns))
+    normalized_posns, _ = normalize(joint_posns)
+    normalized_vels, _ = normalize(joint_vels)
+    print(normalized_posns.mean(), normalized_posns.std())
+    print(normalized_vels.mean(), normalized_vels.std())
 
     [input_sequence, target_sequence] = sequence_from_array(joint_posns, 4, 3)
     print(np.array(input_sequence).shape)
     print(np.array(target_sequence).shape)
     print(input_sequence[3*20] == target_sequence[0])
-    # print(data.shape)
+    print(joint_posns[0])
 
 # sanity_check()
 
