@@ -4,7 +4,7 @@
 import numpy as np
 import h5py
 import glob
-from MogazeDataset import MogazeDataset
+from TrajectoryDataset import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
     """
@@ -115,14 +115,17 @@ def normalize(data):
     normalized = (data-mean)/std
     return normalized, (mean, std)
 
-def generate_data_from_folder(path, seq_len, target_offset, step_size):
+def denormalize(normalized_data, mean, std):
+    data = normalized_data*std
+    data = data + mean
+    return data
+
+def generate_data_from_csv_folder(path, seq_len, target_offset, step_size):
     joint_posns = read_csv_from_folder(path)
     input_seqs, target_seqs, input_vel_seqs, target_vel_seqs = [], [], [], []
     for joint_posn in joint_posns:
         j_posn = downsample_data(joint_posn)
         j_vel = get_velocities(j_posn, dt=0.01)
-        j_posn, (pos_mean, pos_std) = normalize(j_posn)
-        j_vel, (vel_mean, vel_std) = normalize(j_vel)
         j_posn = j_posn[:-1]
         [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
         [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
@@ -130,7 +133,24 @@ def generate_data_from_folder(path, seq_len, target_offset, step_size):
         target_seqs.extend(t_seqs)
         input_vel_seqs.extend(i_vel_seqs)
         target_vel_seqs.extend(t_vel_seqs)
-    dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
+    return dataset
+
+def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size):
+    joint_posns = read_hdf_from_folder(path)
+    input_seqs, target_seqs, input_vel_seqs, target_vel_seqs = [], [], [], []
+    for joint_posn in joint_posns:
+        j_posn = downsample_data(joint_posn)
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
+        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+        input_vel_seqs.extend(i_vel_seqs)
+        target_vel_seqs.extend(t_vel_seqs)
+    
+    dataset = TrajectoryDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
     return dataset
 
 

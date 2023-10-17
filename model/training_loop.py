@@ -2,7 +2,7 @@ import time
 import numpy as np
 import logging
 import mogaze_utils
-from MogazeDataset import MogazeDataset
+from TrajectoryDataset import TrajectoryDataset
 from PVRNN.enc_dec import Encoder_Decoder 
 from PVRNN.batch_sample import generate_train_data
 
@@ -14,6 +14,8 @@ from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 
+import train_utils
+
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 is_cuda = torch.cuda.is_available()
 
@@ -23,34 +25,12 @@ if is_cuda:
 else:
     device = torch.device("cpu")
 
-# joint_dims = 66
-joint_dims = 2
-seq_len = 5
+joint_dims = 66
+# joint_dims = 2
+seq_len = 10
 target_offset = 3
 step_size = 1
-
-def evaluate(model, test_loader):
-    # Set the model in evaluation mode (no gradient computation)
-    model.eval()
-
-    # Initialize a variable to store MSE
-    mse_values = []
-
-    # Iterate through the test DataLoader
-    with torch.no_grad():
-        for data, labels in test_loader:
-            # Forward pass to make predictions using the model
-            predictions, h = model(data.to(device).float())
-            # Calculate the MSE for the batch
-            loss = criterion(predictions, labels.to(device).float())
-            mse = loss.item()
-            # Append the MSE value to the list
-            mse_values.append(mse)
-
-    # Calculate the overall evaluation metric (average MSE)
-    average_mse = np.mean(mse_values)
-
-    return average_mse
+hidden_size = 128
 
 # joint_posns = mogaze_utils.read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
 # joint_posns = mogaze_utils.downsample_data(joint_posns)
@@ -63,7 +43,8 @@ def evaluate(model, test_loader):
 
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
-dataset = mogaze_utils.generate_data_from_folder("../low_dim_data/", seq_len, target_offset, step_size)
+# dataset = mogaze_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
+dataset = mogaze_utils.generate_data_from_hdf_folder("../mogaze_data/", seq_len, target_offset, step_size)
 
 # print(dataset)
 
@@ -77,13 +58,13 @@ dataset = mogaze_utils.generate_data_from_folder("../low_dim_data/", seq_len, ta
 batch_size = 64
 
 # Instantiate the model with hyperparameters
-model = Recurrent_Model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=100, n_layers=2)
-# model = Encoder_Decoder(input_size=joint_dims, hidden_size=100, num_layer=2, rnn_unit='gru', veloc=True)
-# We'll also set the model to the device that we defined earlier (default is CPU)
-model = model.to(device)
+# model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
+model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False)
+# encoder = EncoderRNN(input_size=joint_dims*2, hidden_size=hidden_size, seq_len=seq_len).to(device)
+# decoder = DecoderRNN(hidden_size=hidden_size, output_size=joint_dims*2, seq_len=seq_len)
 
 # Define hyperparameters
-n_epochs = 2000
+n_epochs = 400
 lr=0.001
 
 # Define Loss, Optimizer
@@ -97,31 +78,6 @@ train_loader = DataLoader(train, batch_size=batch_size, num_workers=0, shuffle=T
 test_loader = DataLoader(test, batch_size=batch_size, num_workers=0, shuffle=True)
 validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shuffle=True)
 
-epoch_times = []
-for epoch in range(1, n_epochs + 1):
-    start_time = time.perf_counter()
-    # h = model.init_hidden(batch_size)
-    losses = []
-    counter = 0
-    for x, label in train_loader:
-        counter += 1
-        model.zero_grad()
-        
-        # out, h = model(x.to(device).float(), label.to(device).float())
-        out, h = model(x.to(device).float())
-        loss = criterion(out, label.to(device).float())
-        loss.backward()
-        optimizer.step()
-        losses.append(loss.item())
-        if counter%200 == 0:
-            print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
-    current_time = time.perf_counter()
-    if epoch % 100 ==0 and epoch > 0:
-        print("Epoch {}/{} Done, Total Loss: {}, Validation Loss: {}".format(epoch, n_epochs, np.mean(losses), evaluate(model, validate_loader)))
-        print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
-    epoch_times.append(current_time-start_time)
-print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
-
-print("Test Loss: {}".format(evaluate(model, test_loader)))
-
+# train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
+train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)
 

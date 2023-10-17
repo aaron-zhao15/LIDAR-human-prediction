@@ -1,8 +1,9 @@
 import numpy as np
 import copy
 from torch.utils.data import Dataset
+import mogaze_utils
 
-class MogazeDataset(Dataset):
+class TrajectoryDataset(Dataset):
     def __init__(self, input_seqs, input_vels, target_seqs, target_vels):
         self.input_seqs = input_seqs
         self.input_vels = input_vels
@@ -20,7 +21,6 @@ class MogazeDataset(Dataset):
         target = self.target_data[idx]
         # target = self.target_vels[idx]
         return input, target
-    
 
 class generate_train_data(Dataset):
     def __init__(self, data_set, source_seq_len, target_seq_len, sample_start=16):
