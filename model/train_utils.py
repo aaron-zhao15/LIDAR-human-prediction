@@ -16,6 +16,8 @@ from torch.optim import AdamW
 def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader):
     epoch_times = []
     for epoch in range(1, n_epochs + 1):
+        model = model.train()
+        
         start_time = time.perf_counter()
         # h = model.init_hidden(batch_size)
         losses = []
