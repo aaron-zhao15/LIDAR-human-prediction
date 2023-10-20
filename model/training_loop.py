@@ -1,10 +1,8 @@
 import time
 import numpy as np
 import logging
-import mogaze_utils
+import data_utils
 from TrajectoryDataset import TrajectoryDataset
-from PVRNN.enc_dec import Encoder_Decoder 
-from PVRNN.batch_sample import generate_train_data
 
 from models import *
 
@@ -44,7 +42,7 @@ hidden_size = 128
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = mogaze_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = mogaze_utils.generate_data_from_hdf_folder("../mogaze_data/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
 
 # print(dataset)
 

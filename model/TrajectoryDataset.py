@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 from torch.utils.data import Dataset
-import mogaze_utils
 
 class TrajectoryDataset(Dataset):
     def __init__(self, input_seqs, input_vels, target_seqs, target_vels):

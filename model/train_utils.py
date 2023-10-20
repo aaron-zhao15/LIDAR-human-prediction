@@ -1,10 +1,8 @@
 import time
 import numpy as np
 import logging
-import mogaze_utils
+import data_utils
 from TrajectoryDataset import TrajectoryDataset
-from PVRNN.enc_dec import Encoder_Decoder 
-from PVRNN.batch_sample import generate_train_data
 
 from models import *
 
