@@ -162,8 +162,8 @@ class Encoder_Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.num_layer = num_layer
         self.residual = residual
-        self.dropout_out = nn.Dropout(p=out_dropout)
-        self.linear = nn.Linear(hidden_size, input_size)
+        self.dropout_out = nn.Dropout(p=out_dropout).to(device)
+        self.linear = nn.Linear(hidden_size, input_size).to(device)
         self.std_mask = std_mask
         self.veloc = veloc
         rnn_input = 2*input_size if veloc else input_size
