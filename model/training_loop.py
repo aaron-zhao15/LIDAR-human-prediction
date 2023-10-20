@@ -57,7 +57,7 @@ batch_size = 64
 
 # Instantiate the model with hyperparameters
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
-model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False)
+model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # encoder = EncoderRNN(input_size=joint_dims*2, hidden_size=hidden_size, seq_len=seq_len).to(device)
 # decoder = DecoderRNN(hidden_size=hidden_size, output_size=joint_dims*2, seq_len=seq_len)
 

@@ -156,7 +156,7 @@ def position_embedding(d_model, max_len=75): # +25*4
 
 class Encoder_Decoder(nn.Module):
     def __init__(self, input_size, hidden_size, num_layer, rnn_unit, residual=False, out_dropout=0, std_mask=False,
-                 veloc=False, pos_embed=False, pos_embed_dim=96, cuda=False):
+                 veloc=False, pos_embed=False, pos_embed_dim=96, device="cuda"):
         super(Encoder_Decoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -172,13 +172,12 @@ class Encoder_Decoder(nn.Module):
         if pos_embed:
             self.position_embeding = position_embedding(d_model=pos_embed_dim)
             rnn_input = rnn_input + self.position_embeding.size(1)
-            if cuda:
-                self.position_embeding = self.position_embeding.cuda()
+            self.position_embeding = self.position_embeding.to(device)
 
         if rnn_unit == 'gru':
-            self.rnn = nn.GRU(rnn_input, hidden_size, num_layers=num_layer)
+            self.rnn = nn.GRU(rnn_input, hidden_size, num_layers=num_layer).to(device)
         if rnn_unit == 'lstm':
-            self.rnn = nn.LSTM(rnn_input, hidden_size, num_layers=num_layer)
+            self.rnn = nn.LSTM(rnn_input, hidden_size, num_layers=num_layer).to(device)
 
     def forward_seq(self, input, hidden=None):
         pred_pre = input[:,:,0:self.input_size].clone()
