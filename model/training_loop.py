@@ -23,8 +23,8 @@ if is_cuda:
 else:
     device = torch.device("cpu")
 
-joint_dims = 66
-# joint_dims = 2
+# joint_dims = 66
+joint_dims = 2
 seq_len = 10
 target_offset = 3
 step_size = 1
@@ -41,8 +41,8 @@ hidden_size = 128
 
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
-# dataset = mogaze_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
 
 # print(dataset)
 
