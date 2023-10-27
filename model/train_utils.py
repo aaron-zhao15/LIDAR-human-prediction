@@ -24,11 +24,11 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
         counter = 0
         for x, label in train_loader:
             counter += 1
-            model.zero_grad()
             
             out, h = model(x.to(device).float(), label.to(device).float())
             # out, h = model(x.to(device).float(), label)
             loss = criterion(out, label.to(device).float())
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
@@ -40,8 +40,8 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
         epoch_times.append(current_time-start_time)
     print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
-
     print("Test Loss: {}".format(evaluate(model, test_loader, criterion)))
+
 
 
 def evaluate(model, test_loader, criterion):

@@ -79,3 +79,6 @@ validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shu
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
 train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)
 
+torch.save(model, 'EncoderDecoderModel.pt')
+
+
