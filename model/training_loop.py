@@ -23,8 +23,8 @@ if is_cuda:
 else:
     device = torch.device("cpu")
 
-# joint_dims = 66
-joint_dims = 2
+joint_dims = 66
+# joint_dims = 2
 seq_len = 10
 target_offset = 3
 step_size = 1
@@ -41,8 +41,8 @@ hidden_size = 128
 
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
-dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-# dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
 
 # print(dataset)
 
@@ -57,7 +57,8 @@ batch_size = 64
 
 # Instantiate the model with hyperparameters
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
-model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
+# model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
+model = TransformerModel(joint_dims*2, 1, 512, 8, 0.1).to(device)
 # encoder = EncoderRNN(input_size=joint_dims*2, hidden_size=hidden_size, seq_len=seq_len).to(device)
 # decoder = DecoderRNN(hidden_size=hidden_size, output_size=joint_dims*2, seq_len=seq_len)
 
@@ -79,6 +80,6 @@ validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shu
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
 train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)
 
-torch.save(model, 'EncoderDecoderModel.pt')
+torch.save(model, 'TransformerModel.pt')
 
 
