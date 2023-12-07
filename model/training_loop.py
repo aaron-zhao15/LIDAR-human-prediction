@@ -58,9 +58,8 @@ batch_size = 64
 # Instantiate the model with hyperparameters
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
-model = TransformerModel(joint_dims*2, 6, 512, 8, 0.1).to(device)
-# encoder = EncoderRNN(input_size=joint_dims*2, hidden_size=hidden_size, seq_len=seq_len).to(device)
-# decoder = DecoderRNN(hidden_size=hidden_size, output_size=joint_dims*2, seq_len=seq_len)
+# model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
+model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 
 # Define hyperparameters
 n_epochs = 400
