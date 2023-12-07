@@ -56,7 +56,7 @@ def evaluate(model, test_loader, criterion):
     with torch.no_grad():
         for x, label in test_loader:
             # Forward pass to make predictions using the model
-            predictions = model(x.to(device).float()).float()
+            encoder_out, predictions = model(x.to(device).float())
             # Calculate the MSE for the batch
             loss = criterion(predictions, label.to(device).float())
             mse = loss.item()
