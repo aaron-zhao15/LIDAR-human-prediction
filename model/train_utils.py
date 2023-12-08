@@ -27,6 +27,7 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             
             # out = model(x.to(device).float())
             encoder_out, out = model(x.to(device).float())
+            print(encoder_out.shape)
             # print(out.shape, label.to(device).float().shape)
             loss = criterion(out, label.to(device).float())
             optimizer.zero_grad()

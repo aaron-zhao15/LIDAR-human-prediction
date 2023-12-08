@@ -25,10 +25,10 @@ else:
 
 joint_dims = 66
 # joint_dims = 2
-seq_len = 10
-target_offset = 3
-step_size = 1
-hidden_size = 128
+seq_len = 50
+target_offset = 25
+step_size = 10
+hidden_size = 1024
 
 # joint_posns = mogaze_utils.read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
 # joint_posns = mogaze_utils.downsample_data(joint_posns)
@@ -59,11 +59,11 @@ batch_size = 64
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
-model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
+model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
 
 # Define hyperparameters
 n_epochs = 400
-lr=0.001
+lr=0.01
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
