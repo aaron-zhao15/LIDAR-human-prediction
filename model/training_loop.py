@@ -85,6 +85,6 @@ optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.paramet
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
 train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)
 
-torch.save(model, 'TransformerModel.pt')
+torch.save(model, 'TransformerModel2.pt')
 
 
