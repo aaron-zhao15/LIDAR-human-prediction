@@ -5,12 +5,15 @@ import data_utils
 from TrajectoryDataset import TrajectoryDataset
 
 from models import *
+from individual_TF import IndividualTF
 
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
+
+from transformer.noam_opt import NoamOpt
 
 import train_utils
 
@@ -59,7 +62,8 @@ batch_size = 64
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
-model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
+# model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
+model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=joint_dims//3, dec_out_size=joint_dims*2).to(device)
 
 # Define hyperparameters
 n_epochs = 400
@@ -67,7 +71,7 @@ lr=0.01
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
 train, validate, test = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
 
@@ -75,6 +79,8 @@ train, validate, test = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
 train_loader = DataLoader(train, batch_size=batch_size, num_workers=0, shuffle=True)
 test_loader = DataLoader(test, batch_size=batch_size, num_workers=0, shuffle=True)
 validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shuffle=True)
+
+optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
 train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)

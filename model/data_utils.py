@@ -4,6 +4,7 @@
 import numpy as np
 import h5py
 import glob
+import pandas as pd
 from TrajectoryDataset import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
@@ -88,7 +89,7 @@ def sequence_from_array(data_array, seq_len, target_offset, step_size=20):
 
         input_sequences.append(input_sequence)
         target_sequences.append(target_sequence)
-    return [input_sequences, target_sequences]
+    return [np.array(input_sequences), np.array(target_sequences)]
 
 def sequences_from_framedata(dataset, seq_len, target_offset=3):
     """
@@ -101,13 +102,33 @@ def sequences_from_framedata(dataset, seq_len, target_offset=3):
     else:
         return [sequence_from_array(data, seq_len, target_offset) for data in dataset]
 
-def write_seq_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/mogaze_data/sequences/"):
+def write_seqs_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/data/sequences_collect"):
     """
     Write a list of input-target sequence pairs to some file path. This method doesn't preserve info about the
     original name identifier, so it should really only be used for temporary data storage. Serves as a kind of
     cache. 
     """
-    return
+    combined_data = []
+    for array in array_list:
+        combined_data.extend(array)
+    DF = pd.DataFrame(np.array(combined_data))
+    DF.to_csv(file_path)
+        
+
+def hdf_to_txt(hdf_path):
+    """
+    Read the data from a .hdf5 file into a numpy array and return it.
+    @hdf_path: The string pathname of the specified .hdf5 file.
+    """
+    with h5py.File(hdf_path, 'r') as f:
+        group_keys = list(f.keys())
+        items = f.attrs.items()
+        # print(f['data'].attrs['description'])
+        data = f.get(group_keys[0])
+        DF = pd.DataFrame(np.array(data))
+        DF.to_csv("data1.csv")
+
+
 
 def normalize(data):
     mean = np.mean(data)
@@ -120,27 +141,9 @@ def denormalize(normalized_data, mean, std):
     data = data + mean
     return data
 
-def generate_data_from_csv_folder(path, seq_len, target_offset, step_size):
+def generate_data_from_csv_folder(path, seq_len, target_offset, step_size, use_vel=True):
     joint_posns = read_csv_from_folder(path)
-    input_seqs, target_seqs, input_vel_seqs, target_vel_seqs = [], [], [], []
-    for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn)
-        j_vel = get_velocities(j_posn, dt=0.01)
-        j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
-        j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
-        j_posn = j_posn[:-1]
-        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
-        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
-        input_seqs.extend(i_seqs)
-        target_seqs.extend(t_seqs)
-        input_vel_seqs.extend(i_vel_seqs)
-        target_vel_seqs.extend(t_vel_seqs)
-    dataset = TrajectoryDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
-    return dataset
-
-def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size):
-    joint_posns = read_hdf_from_folder(path)
-    input_seqs, target_seqs, input_vel_seqs, target_vel_seqs = [], [], [], []
+    input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
         j_posn = downsample_data(joint_posn)
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
@@ -149,15 +152,34 @@ def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size):
         j_posn = j_posn[:-1]
         [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
         [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        if use_vel:
+            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
-        input_vel_seqs.extend(i_vel_seqs)
-        target_vel_seqs.extend(t_vel_seqs)
-    
-    dataset = TrajectoryDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
+
+    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
-
+def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=True):
+    joint_posns = read_hdf_from_folder(path)
+    input_seqs, target_seqs = [], []
+    for joint_posn in joint_posns:
+        j_posn = downsample_data(joint_posn)
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+        # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
+        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        if use_vel:
+            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+    
+    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    return dataset
 
 def sanity_check():
     # dataset = read_from_folder()
@@ -178,7 +200,8 @@ def sanity_check():
     print(np.array(target_sequence).shape)
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
-
+    
+# generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len=50, target_offset=25, step_size=10)
 # sanity_check()
 
 

@@ -3,21 +3,18 @@ import copy
 from torch.utils.data import Dataset
 
 class TrajectoryDataset(Dataset):
-    def __init__(self, input_seqs, input_vels, target_seqs, target_vels):
+    def __init__(self, input_seqs, target_seqs, use_vel=True):
+        self.use_vel = use_vel
         self.input_seqs = input_seqs
-        self.input_vels = input_vels
         self.target_seqs = target_seqs
-        self.target_vels = target_vels
-        self.input_data = np.append(input_seqs, input_vels, axis=2)
-        self.target_data = np.append(target_seqs, target_vels, axis=2)
 
     def __len__(self):
-        return len(self.input_vels)
+        return len(self.input_seqs)
 
     def __getitem__(self, idx):
-        input = self.input_data[idx]
+        input = self.input_seqs[idx]
         # input = self.input_vels[idx]
-        target = self.target_data[idx]
+        target = self.target_seqs[idx]
         # target = self.target_vels[idx]
         return input, target
 

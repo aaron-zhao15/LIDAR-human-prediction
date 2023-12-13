@@ -13,6 +13,9 @@ from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 
+from transformer.batch import subsequent_mask
+
+
 def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader):
     epoch_times = []
     for epoch in range(1, n_epochs + 1):
@@ -23,14 +26,19 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
         losses = []
         counter = 0
         for x, label in train_loader:
+            x, label = x.to(device).float(), label.to(device).float()
             counter += 1
+
+            dec_inp = torch.ones((x.shape[0], 1, (x.shape[2]//2)//3)).float()
+            src_att = torch.ones((x.shape[0], 1,x.shape[1])).to(device).float()
+            trg_att=subsequent_mask(dec_inp.shape[1]).repeat(dec_inp.shape[0],1,1).to(device).float()
             
-            # out = model(x.to(device).float())
-            encoder_out, out = model(x.to(device).float())
-            print(encoder_out.shape)
+            out = model(x, dec_inp, src_att, trg_att)
+            # encoder_out, out = model(x.to(device).float())
             # print(out.shape, label.to(device).float().shape)
-            loss = criterion(out, label.to(device).float())
-            optimizer.zero_grad()
+            # print(out.shape, label[:,-1:,:].shape)
+            loss = criterion(out, label[:,-1:,:])
+            optimizer.optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
