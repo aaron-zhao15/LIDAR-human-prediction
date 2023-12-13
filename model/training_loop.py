@@ -67,7 +67,7 @@ model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joi
 
 # Define hyperparameters
 n_epochs = 400
-lr=0.01
+lr=0.1
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()

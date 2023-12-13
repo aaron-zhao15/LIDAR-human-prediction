@@ -33,7 +33,8 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             target = label[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
-            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2]))
+            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
+            start_of_seq[:, :, -1] = 1
 
             dec_inp = torch.cat((start_of_seq, target), 1)
             src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(device).float()
@@ -43,7 +44,7 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             # encoder_out, out = model(x.to(device).float())
             # print(out.shape, label.to(device).float().shape)
             # print(out.shape, label[:,-1:,:].shape)
-            loss = criterion(out, label[:,-1:,:])
+            loss = criterion(out[:,-1:,:], label[:,-1:,:])
             optimizer.optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -72,10 +73,12 @@ def evaluate(model, test_loader, criterion, device):
         for x, label in test_loader:
             x, label = x.to(device).float(), label.to(device).float()
             
-            target = label[:, :-1, :]
+            # target = label[:, :-1, :]
+            target = x[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
-            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2]))
+            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
+            start_of_seq[:, :, -1] = 1
 
             dec_inp = torch.cat((start_of_seq, target), 1)
             src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(device).float()
@@ -85,7 +88,7 @@ def evaluate(model, test_loader, criterion, device):
             # Forward pass to make predictions using the model
             # encoder_out, out = model(x)
             # Calculate the MSE for the batch
-            loss = criterion(out, label)
+            loss = criterion(out[:,-1:,:], label[:,-1:,:])
             mse = loss.item()
             # Append the MSE value to the list
             mse_values.append(mse)
