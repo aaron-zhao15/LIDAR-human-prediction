@@ -30,7 +30,8 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
 
-            target = label[:, :-1, :]
+            # target = label[:, :-1, :]
+            target = x[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
             start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
