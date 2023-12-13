@@ -7,7 +7,7 @@ from .functional import clones, attention
 
 class MultiHeadAttention(nn.Module):
 
-    def __init__(self, h, d_model, dropout=0.1):
+    def __init__(self, h, d_model, dropout=0.1, device='cpu'):
         """
         Take in model size and number of heads.
         """
@@ -16,7 +16,7 @@ class MultiHeadAttention(nn.Module):
         #  We assume d_v always equals d_k
         self.d_k = d_model // h
         self.h = h
-        self.linears = clones(nn.Linear(d_model, d_model), 4)
+        self.linears = clones(nn.Linear(d_model, d_model, device=device), 4)
         self.attn = None
         self.dropout = nn.Dropout(p=dropout)
 

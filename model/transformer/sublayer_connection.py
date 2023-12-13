@@ -11,9 +11,9 @@ class SublayerConnection(nn.Module):
     Note for code simplicity the norm is first as opposed to last.
     """
 
-    def __init__(self, size, dropout):
+    def __init__(self, size, dropout, device='cpu'):
         super(SublayerConnection, self).__init__()
-        self.norm = LayerNorm(size)
+        self.norm = LayerNorm(size, device=device)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):

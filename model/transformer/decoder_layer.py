@@ -11,13 +11,13 @@ class DecoderLayer(nn.Module):
     Decoder is made of self-attn, src-attn, and feed forward (defined below)
     """
 
-    def __init__(self, size, self_attn, src_attn, feed_forward, dropout):
+    def __init__(self, size, self_attn, src_attn, feed_forward, dropout, device='cpu'):
         super(DecoderLayer, self).__init__()
         self.size = size
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(SublayerConnection(size, dropout), 3)
+        self.sublayer = clones(SublayerConnection(size, dropout, device=device), 3)
 
     def forward(self, x, memory, src_mask, tgt_mask):
         """

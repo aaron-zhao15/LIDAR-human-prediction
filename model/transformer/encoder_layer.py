@@ -11,11 +11,11 @@ class EncoderLayer(nn.Module):
     Encoder is made up of self-attn and feed forward (defined below)
     """
 
-    def __init__(self, size, self_attn, feed_forward, dropout):
+    def __init__(self, size, self_attn, feed_forward, dropout, device='cpu'):
         super(EncoderLayer, self).__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(SublayerConnection(size, dropout), 2)
+        self.sublayer = clones(SublayerConnection(size, dropout, device=device), 2)
         self.size = size
 
     def forward(self, x, mask):

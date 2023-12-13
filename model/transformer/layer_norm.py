@@ -10,10 +10,10 @@ class LayerNorm(nn.Module):
     Construct a layernorm module (See citation for details).
     """
 
-    def __init__(self, features, eps=1e-6):
+    def __init__(self, features, eps=1e-6, device='cpu'):
         super(LayerNorm, self).__init__()
-        self.a_2 = nn.Parameter(torch.ones(features))
-        self.b_2 = nn.Parameter(torch.zeros(features))
+        self.a_2 = nn.Parameter(torch.ones(features, device=device))
+        self.b_2 = nn.Parameter(torch.zeros(features, device=device))
         self.eps = eps
 
     def forward(self, x):

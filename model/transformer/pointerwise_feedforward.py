@@ -9,10 +9,10 @@ class PointerwiseFeedforward(nn.Module):
     Implements FFN equation.
     """
 
-    def __init__(self, d_model, d_ff, dropout=0.1):
+    def __init__(self, d_model, d_ff, dropout=0.1, device='cpu'):
         super(PointerwiseFeedforward, self).__init__()
-        self.w_1 = nn.Linear(d_model, d_ff)
-        self.w_2 = nn.Linear(d_ff, d_model)
+        self.w_1 = nn.Linear(d_model, d_ff, device=device)
+        self.w_2 = nn.Linear(d_ff, d_model, device=device)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):

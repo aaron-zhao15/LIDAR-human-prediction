@@ -11,10 +11,10 @@ class Encoder(nn.Module):
     Core encoder is a stack of N layers
     """
 
-    def __init__(self, layer, n):
+    def __init__(self, layer, n, device='cpu'):
         super(Encoder, self).__init__()
         self.layers = clones(layer, n)
-        self.norm = LayerNorm(layer.size)
+        self.norm = LayerNorm(layer.size, device=device)
 
     def forward(self, x, x_mask):
         """

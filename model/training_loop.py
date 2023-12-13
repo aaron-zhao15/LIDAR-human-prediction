@@ -57,13 +57,13 @@ dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_l
 # target_seq = torch.Tensor(target_seq)
 
 batch_size = 64
-
+# print(device)
 # Instantiate the model with hyperparameters
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
-model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=joint_dims//3, dec_out_size=joint_dims*2).to(device)
+model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=joint_dims//3, dec_out_size=joint_dims*2, device=device)
 
 # Define hyperparameters
 n_epochs = 400
@@ -83,7 +83,7 @@ validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shu
 optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
-train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader)
+train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
 torch.save(model, 'TransformerModel2.pt')
 

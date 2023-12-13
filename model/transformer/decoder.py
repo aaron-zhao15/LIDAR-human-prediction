@@ -11,10 +11,10 @@ class Decoder(nn.Module):
     Generic N layer decoder with masking.
     """
 
-    def __init__(self, layer, n):
+    def __init__(self, layer, n, device='cpu'):
         super(Decoder, self).__init__()
         self.layers = clones(layer, n)
-        self.norm = LayerNorm(layer.size)
+        self.norm = LayerNorm(layer.size, device=device)
 
     def forward(self, x, memory, src_mask, tgt_mask):
         for layer in self.layers:
