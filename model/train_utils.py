@@ -30,7 +30,12 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
 
-            dec_inp = torch.ones((x.shape[0], 1, (x.shape[2]//2)//3)).to(device).float()
+            target = label[:, :-1, :]
+            target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
+            target = torch.cat((target, target_c), -1)
+            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2]))
+
+            dec_inp = torch.cat((start_of_seq, target), 1)
             src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(device).float()
             trg_att = subsequent_mask(dec_inp.shape[1]).repeat(dec_inp.shape[0],1,1).to(device).float()
             
@@ -66,8 +71,13 @@ def evaluate(model, test_loader, criterion, device):
     with torch.no_grad():
         for x, label in test_loader:
             x, label = x.to(device).float(), label.to(device).float()
+            
+            target = label[:, :-1, :]
+            target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
+            target = torch.cat((target, target_c), -1)
+            start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2]))
 
-            dec_inp = torch.ones((x.shape[0], 1, (x.shape[2]//2)//3)).to(device).float()
+            dec_inp = torch.cat((start_of_seq, target), 1)
             src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(device).float()
             trg_att = subsequent_mask(dec_inp.shape[1]).repeat(dec_inp.shape[0],1,1).to(device).float()
             

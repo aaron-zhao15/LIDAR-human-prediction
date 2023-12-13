@@ -42,11 +42,12 @@ class IndividualTF(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, x):
-        dec_inp = torch.ones((x.shape[0], 1, (x.shape[2]//2)//3)).to(self.device).float()
-        src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(self.device).float()
-        trg_att = subsequent_mask(dec_inp.shape[1]).repeat(dec_inp.shape[0],1,1).to(self.device).float()
-        return self.model.generator(self.model(x, dec_inp, src_att, trg_att))
+    def forward(self, *x):
+        # dec_inp = torch.ones((x.shape[0], 1, (x.shape[2]//2)//3)).to(self.device).float()
+        # src_att = torch.ones((x.shape[0], 1, x.shape[1])).to(self.device).float()
+        # trg_att = subsequent_mask(dec_inp.shape[1]).repeat(dec_inp.shape[0],1,1).to(self.device).float()
+        # return self.model.generator(self.model(x, dec_inp, src_att, trg_att))
+        return self.model.generator(self.model(*x))
 
 class LinearEmbedding(nn.Module):
     def __init__(self, inp_size, d_model, device='cpu'):

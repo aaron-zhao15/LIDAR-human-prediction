@@ -63,7 +63,7 @@ batch_size = 64
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
-model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=joint_dims//3, dec_out_size=joint_dims*2, device=device)
+model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 
 # Define hyperparameters
 n_epochs = 400
