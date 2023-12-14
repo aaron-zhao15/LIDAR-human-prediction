@@ -1,4 +1,5 @@
-/mogaze_data
-/model/*.pt
+mogaze_data
+model/*.pt
 .DS_Store
-/mode/.DS_Store
+model/.DS_Store
+model/__pycache__/
