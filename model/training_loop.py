@@ -88,6 +88,6 @@ epoch_losses, evaluations = train_utils.standard_train(n_epochs, model, criterio
 
 np.savetxt('epoch_losses.gz', epoch_losses)
 np.savetxt('evaluations.gz', evaluations)
-torch.save(model, 'TransformerModel5.pt')
+torch.save(model, 'trained_model_data/TransformerModel5.pt')
 
 

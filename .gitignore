@@ -1,5 +1,5 @@
 mogaze_data
-model/*.pt
+model/trained_model_data/*.pt
 .DS_Store
 model/.DS_Store
 model/__pycache__/
