@@ -19,6 +19,8 @@ from transformer.batch import subsequent_mask
 
 def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
     epoch_times = []
+    epoch_losses = []
+    evaluations = []
     for epoch in range(1, n_epochs + 1):
         model = model.train()
         
@@ -30,8 +32,8 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
 
-            # target = label[:, :-1, :]
-            target = x[:, :-1, :]
+            target = label[:, :-1, :]
+            # target = x[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
             start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
@@ -45,20 +47,24 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             # encoder_out, out = model(x.to(device).float())
             # print(out.shape, label.to(device).float().shape)
             # print(out.shape, label[:,-1:,:].shape)
-            loss = criterion(out[:,-1:,:], label[:,-1:,:])
+            loss = criterion(out, label)
             optimizer.optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
             if counter%200 == 0:
                 print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
+        epoch_losses.append(np.mean(losses))
+        evaluation = evaluate(model, validate_loader, criterion, device)
+        evaluations.append(evaluation)
         current_time = time.perf_counter()
         if epoch > 0:
-            print("Epoch {}/{} Done, Total Loss: {}, Validation Loss: {}".format(epoch, n_epochs, np.mean(losses), evaluate(model, validate_loader, criterion, device)))
+            print("Epoch {}/{} Done, Total Loss: {}, Validation Loss: {}".format(epoch, n_epochs, np.mean(losses), evaluation))
             print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
         epoch_times.append(current_time-start_time)
     print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
     print("Test Loss: {}".format(evaluate(model, test_loader, criterion, device)))
+    return epoch_losses, evaluations
 
 
 
@@ -74,8 +80,8 @@ def evaluate(model, test_loader, criterion, device):
         for x, label in test_loader:
             x, label = x.to(device).float(), label.to(device).float()
             
-            # target = label[:, :-1, :]
-            target = x[:, :-1, :]
+            target = label[:, :-1, :]
+            # target = x[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
             start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
