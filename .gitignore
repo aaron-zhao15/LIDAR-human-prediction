@@ -1,1 +1,4 @@
 /mogaze_data
+/model/*.pt
+.DS_Store
+/mode/.DS_Store
