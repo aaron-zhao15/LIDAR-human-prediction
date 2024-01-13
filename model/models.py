@@ -187,7 +187,7 @@ class RNN_model(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_size)
         self.relu = nn.ReLU()
     
-    def forward(self, x, target):
+    def forward(self, x):
         
         batch_size = x.size(0)
         seq_len = x.size(1)

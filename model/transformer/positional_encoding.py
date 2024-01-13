@@ -27,5 +27,5 @@ class PositionalEncoding(nn.Module):
         self.device = device
 
     def forward(self, x):
-        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False).to(self.device)
+        x = x + Variable(self.pe[:, :x.size(1)].contiguous(), requires_grad=False).to(self.device)
         return self.dropout(x)

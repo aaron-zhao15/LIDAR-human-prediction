@@ -1,23 +1,17 @@
 import time
 import math
 import numpy as np
-import logging
-import data_utils
-from TrajectoryDataset import TrajectoryDataset
 
 from models import *
 
 import torch
 import torch.nn as nn
 from torch import optim
-from torch.utils.data import TensorDataset
-from torch.utils.data import DataLoader
-from torch.optim import AdamW
 
 from transformer.batch import subsequent_mask
 
 
-def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
+def train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
     epoch_times = []
     epoch_losses = []
     evaluations = []
@@ -55,7 +49,7 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             if counter%200 == 0:
                 print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
         epoch_losses.append(np.mean(losses))
-        evaluation = evaluate(model, validate_loader, criterion, device)
+        evaluation = evaluate_masks(model, validate_loader, criterion, device)
         evaluations.append(evaluation)
         current_time = time.perf_counter()
         if epoch > 0:
@@ -63,12 +57,11 @@ def standard_train(n_epochs, model, criterion, optimizer, train_loader, validate
             print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
         epoch_times.append(current_time-start_time)
     print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
-    print("Test Loss: {}".format(evaluate(model, test_loader, criterion, device)))
+    print("Test Loss: {}".format(evaluate_masks(model, test_loader, criterion, device)))
     return epoch_losses, evaluations
 
 
-
-def evaluate(model, test_loader, criterion, device):
+def evaluate_masks(model, test_loader, criterion, device):
     # Set the model in evaluation mode (no gradient computation)
     model = model.eval()
 
@@ -96,6 +89,92 @@ def evaluate(model, test_loader, criterion, device):
             # encoder_out, out = model(x)
             # Calculate the MSE for the batch
             loss = criterion(out[:,-1:,:], label[:,-1:,:])
+            mse = loss.item()
+            # Append the MSE value to the list
+            mse_values.append(mse)
+
+    # Calculate the overall evaluation metric (average MSE)
+    average_mse = np.mean(mse_values)
+
+    return average_mse
+
+def evaluate_stupid(model, test_loader, criterion, device):
+    # Set the model in evaluation mode (no gradient computation)
+    model = model.eval()
+
+    # Initialize a variable to store MSE
+    mse_values = []
+
+    # Iterate through the test DataLoader
+    with torch.no_grad():
+        for x, label in test_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            
+            # Forward pass to make predictions using the model
+            out, hidden = model(x, label)
+            # Calculate the MSE for the batch
+            loss = criterion(out, label)
+            mse = loss.item()
+            # Append the MSE value to the list
+            mse_values.append(mse)
+
+    # Calculate the overall evaluation metric (average MSE)
+    average_mse = np.mean(mse_values)
+
+    return average_mse
+
+def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
+    epoch_times = []
+    epoch_losses = []
+    evaluations = []
+    for epoch in range(1, n_epochs + 1):
+        model = model.train()
+        
+        start_time = time.perf_counter()
+        # h = model.init_hidden(batch_size)
+        losses = []
+        counter = 0
+        for x, label in train_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            counter += 1
+            out, hidden = model(x)
+            # print(out.shape, label.to(device).float().shape)
+            # print(out.shape, label[:,-1:,:].shape)
+            loss = criterion(out, label)
+            optimizer.optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+            if counter%200 == 0:
+                print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
+        epoch_losses.append(np.mean(losses))
+        evaluation = evaluate_standard(model, validate_loader, criterion, device)
+        evaluations.append(evaluation)
+        current_time = time.perf_counter()
+        if epoch > 0:
+            print("Epoch {}/{} Done, Total Loss: {}, Validation Loss: {}".format(epoch, n_epochs, np.mean(losses), evaluation))
+            print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
+        epoch_times.append(current_time-start_time)
+    print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
+    print("Test Loss: {}".format(evaluate_standard(model, test_loader, criterion, device)))
+    return epoch_losses, evaluations
+
+def evaluate_standard(model, test_loader, criterion, device):
+    # Set the model in evaluation mode (no gradient computation)
+    model = model.eval()
+
+    # Initialize a variable to store MSE
+    mse_values = []
+
+    # Iterate through the test DataLoader
+    with torch.no_grad():
+        for x, label in test_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            
+            # Forward pass to make predictions using the model
+            out, hidden = model(x)
+            # Calculate the MSE for the batch
+            loss = criterion(out, label)
             mse = loss.item()
             # Append the MSE value to the list
             mse_values.append(mse)

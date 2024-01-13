@@ -31,7 +31,8 @@ joint_dims = 66
 seq_len = 50
 target_offset = 25
 step_size = 10
-hidden_size = 1024
+# hidden_size = 1024
+hidden_size = 64
 
 # joint_posns = mogaze_utils.read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
 # joint_posns = mogaze_utils.downsample_data(joint_posns)
@@ -59,20 +60,19 @@ dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_l
 batch_size = 64
 # print(device)
 # Instantiate the model with hyperparameters
-# model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
+model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=2, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=20, rnn_unit='gru', veloc=False, device=device)
-model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
+# model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 # model = torch.load('TransformerModel4.pt')
 
 # Define hyperparameters
-n_epochs = 400
+n_epochs = 100
 lr=0.1
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
-# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
 train, validate, test = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
 
@@ -81,13 +81,14 @@ train_loader = DataLoader(train, batch_size=batch_size, num_workers=0, shuffle=T
 test_loader = DataLoader(test, batch_size=batch_size, num_workers=0, shuffle=True)
 validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shuffle=True)
 
+# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
 # train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
-epoch_losses, evaluations = train_utils.standard_train(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
+epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('epoch_losses.gz', epoch_losses)
-np.savetxt('evaluations.gz', evaluations)
-torch.save(model, 'trained_model_data/TransformerModel5.pt')
+np.savetxt('epoch_losses_rnn.gz', epoch_losses)
+np.savetxt('evaluations_rnn.gz', evaluations)
+torch.save(model, 'trained_model_data/GRU.pt')
 
 
