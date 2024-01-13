@@ -61,9 +61,6 @@ def train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_lo
     return epoch_losses, evaluations
 
 
-<<<<<<< HEAD
-def evaluate_masks(model, test_loader, criterion, device):
-=======
 def train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
     epoch_times = []
     epoch_losses = []
@@ -100,8 +97,7 @@ def train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_lo
     return epoch_losses, evaluations
 
 
-def evaluate(model, test_loader, criterion, device):
->>>>>>> 6acee004a39a17affd581749a66ee53f53107cd4
+def evaluate_masks(model, test_loader, criterion, device):
     # Set the model in evaluation mode (no gradient computation)
     model = model.eval()
 
@@ -138,11 +134,7 @@ def evaluate(model, test_loader, criterion, device):
 
     return average_mse
 
-<<<<<<< HEAD
-def evaluate_stupid(model, test_loader, criterion, device):
-=======
 def evaluate_pvred(model, test_loader, criterion, device):
->>>>>>> 6acee004a39a17affd581749a66ee53f53107cd4
     # Set the model in evaluation mode (no gradient computation)
     model = model.eval()
 
@@ -155,7 +147,6 @@ def evaluate_pvred(model, test_loader, criterion, device):
             x, label = x.to(device).float(), label.to(device).float()
             
             # Forward pass to make predictions using the model
-<<<<<<< HEAD
             out, hidden = model(x, label)
             # Calculate the MSE for the batch
             loss = criterion(out, label)
@@ -218,9 +209,6 @@ def evaluate_standard(model, test_loader, criterion, device):
             
             # Forward pass to make predictions using the model
             out, hidden = model(x)
-=======
-            encoder_out, out = model(x)
->>>>>>> 6acee004a39a17affd581749a66ee53f53107cd4
             # Calculate the MSE for the batch
             loss = criterion(out, label)
             mse = loss.item()
