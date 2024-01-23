@@ -1,15 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer.decoder import Decoder
-from transformer.multihead_attention import MultiHeadAttention
-from transformer.positional_encoding import PositionalEncoding
-from transformer.pointerwise_feedforward import PointerwiseFeedforward
-from transformer.encoder_decoder import EncoderDecoder
-from transformer.encoder import Encoder
-from transformer.encoder_layer import EncoderLayer
-from transformer.decoder_layer import DecoderLayer
-from transformer.batch import subsequent_mask
+from .transformer.decoder import Decoder
+from .transformer.multihead_attention import MultiHeadAttention
+from .transformer.positional_encoding import PositionalEncoding
+from .transformer.pointerwise_feedforward import PointerwiseFeedforward
+from .transformer.encoder_decoder import EncoderDecoder
+from .transformer.encoder import Encoder
+from .transformer.encoder_layer import EncoderLayer
+from .transformer.decoder_layer import DecoderLayer
+from .transformer.batch import subsequent_mask
 import numpy as np
 import scipy.io
 import os

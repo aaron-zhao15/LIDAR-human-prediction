@@ -46,7 +46,7 @@ hidden_size = 64
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_hdf_folder("../humoro/mogaze/", seq_len, target_offset, step_size)
 
 # print(dataset)
 

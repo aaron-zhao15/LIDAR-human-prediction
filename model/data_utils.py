@@ -26,7 +26,7 @@ def read_from_csv(csv_path):
     """
     return np.genfromtxt(csv_path, delimiter=',')
 
-def read_hdf_from_folder(folder_path="../../humoro/mogaze/"):
+def read_hdf_from_folder(folder_path="../humoro/mogaze/"):
     """
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
     @folder_path: The string pathname of the folder. Ends in /
@@ -186,7 +186,7 @@ def sanity_check():
     # assert type(dataset) == list
     # assert type(dataset[0]) == np.ndarray
 
-    joint_posns = read_from_hdf("../../humoro/mogaze/p1_1_human_data.hdf5")
+    joint_posns = read_from_hdf("../humoro/mogaze/p1_1_human_data.hdf5")
     joint_vels = get_velocities(joint_posns)
     print(len(joint_vels))
     print(len(joint_posns))
@@ -201,7 +201,7 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
     
-# generate_data_from_hdf_folder("../../humoro/mogaze/", seq_len=50, target_offset=25, step_size=10)
+# generate_data_from_hdf_folder("../humoro/mogaze/", seq_len=50, target_offset=25, step_size=10)
 # sanity_check()
 
 
