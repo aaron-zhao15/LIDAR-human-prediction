@@ -1,15 +1,13 @@
 import time
 import math
 import numpy as np
-
-from models import *
-
 import torch
 import torch.nn as nn
 from torch import optim
 
-from individual_TF import IndividualTF
-from transformer.batch import subsequent_mask
+from .models import *
+from .individual_TF import IndividualTF
+from .transformer.batch import subsequent_mask
 
 
 def train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
@@ -27,8 +25,8 @@ def train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_lo
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
 
-            target = label[:, :-1, :]
-            # target = x[:, :-1, :]
+            # target = label[:, :-1, :]
+            target = x[:, :-1, :]
             target_c = torch.ones((target.shape[0], target.shape[1], (target.shape[2]//2)//3)).to(device).float()
             target = torch.cat((target, target_c), -1)
             start_of_seq = torch.zeros((target.shape[0], 1, target.shape[2])).to(device)
@@ -301,11 +299,11 @@ def timeSince(since, percent):
     rs = es - s
     return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
 
-def model_to_state_dict(model_filepath="./trained_model_data/TransformerModel6.pt"):
+def model_to_state_dict(model_filepath="trained_model_data/TransformerModel6.pt"):
     model = torch.load(model_filepath)
     print("Saving model state dict in ", model_filepath[:-3] + "_statedict.pt")
     torch.save(model.state_dict(), model_filepath[:-3] + "_statedict.pt")
     return
 
-model_to_state_dict()
+# model_to_state_dict()
 

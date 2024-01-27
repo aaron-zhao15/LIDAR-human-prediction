@@ -1,11 +1,11 @@
 import time
 import numpy as np
 import logging
-import data_utils
-from TrajectoryDataset import TrajectoryDataset
+from model import data_utils, train_utils
+from model.TrajectoryDataset import TrajectoryDataset
 
-from models import *
-from individual_TF import IndividualTF
+from model.models import *
+from model.individual_TF import IndividualTF
 
 import torch
 import torch.nn as nn
@@ -13,9 +13,7 @@ from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 
-from transformer.noam_opt import NoamOpt
-
-import train_utils
+from model.transformer.noam_opt import NoamOpt
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 is_cuda = torch.cuda.is_available()
@@ -30,9 +28,9 @@ joint_dims = 66
 # joint_dims = 2
 seq_len = 50
 target_offset = 25
-step_size = 10
-# hidden_size = 1024
-hidden_size = 64
+step_size = 1
+hidden_size = 1024
+# hidden_size = 64
 
 # joint_posns = mogaze_utils.read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
 # joint_posns = mogaze_utils.downsample_data(joint_posns)
@@ -46,7 +44,8 @@ hidden_size = 64
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_folder("../humoro/mogaze/", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size)
 
 # print(dataset)
 
@@ -63,8 +62,8 @@ batch_size = 64
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
-model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
-# model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
+# model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
+model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 # model = torch.load('TransformerModel4.pt')
 
 # Define hyperparameters
@@ -84,11 +83,11 @@ validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shu
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
-# train_utils.train(train_loader, encoder, decoder, n_epochs, learning_rate=lr)
-epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
+epoch_losses, evaluations = train_utils.train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
+# epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('epoch_losses.gz', epoch_losses)
-np.savetxt('evaluations.gz', evaluations)
-torch.save(model, 'trained_model_data/Encoder_Decoder_PVRED.pt')
+np.savetxt('model/trained_model_data/epoch_losses_TF_1.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_TF_1.gz', evaluations)
+torch.save(model, 'model/trained_model_data/TF_1_small.pt')
 
 
