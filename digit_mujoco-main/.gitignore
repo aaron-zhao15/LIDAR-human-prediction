@@ -1,0 +1,15 @@
+*~
+__pycache__*
+*.pyc
+*.egg-info
+*.#~
+logs*
+/build/
+/mujocoDigitController.egg-info/
+/DigitControlPybind/bin/
+.vscode/
+/data/*
+/cmake-build-debug/*
+/logs/*
+**/artifacts/
+**/wandb/
