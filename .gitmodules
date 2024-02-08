@@ -1,3 +1,6 @@
 [submodule "minGPT"]
 	path = minGPT
 	url = https://github.com/karpathy/minGPT.git
+[submodule "humoro"]
+	path = humoro
+	url = https://github.com/PhilippJKratzer/humoro.git
