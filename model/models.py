@@ -14,33 +14,6 @@ if is_cuda:
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
-
-class GRU_model(nn.Module):
-    def __init__(self, input_size, output_size, hidden_dim, n_layers, drop_prob=0.0):
-        super(GRU_model, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.n_layers = n_layers
-        
-        # self.embedding = nn.Embedding(input_size, hidden_dim)
-        self.gru = nn.GRU(input_size, hidden_dim, n_layers, batch_first=True, dropout=drop_prob)
-        self.fc = nn.Linear(hidden_dim, output_size)
-        self.relu = nn.ReLU()
-        
-    def forward(self, x):
-        batch_size = x.size(0)
-        seq_len = x.size(1)
-        joint_dims = x.size(2)//2
-        #Initializing hidden state for first input using method defined below
-        h = self.init_hidden(batch_size)
-        out, h = self.gru(x, h)
-        out = self.fc(self.relu(out))
-        out = out.reshape((batch_size, seq_len, joint_dims))
-        return out, h
-    
-    def init_hidden(self, batch_size):
-        weight = next(self.parameters()).data
-        hidden = weight.new(self.n_layers, batch_size, self.hidden_dim).zero_().to(device)
-        return hidden
     
 
 class EncoderDecoder(nn.Module):
@@ -455,7 +428,6 @@ class MLP(nn.Module):
             x = mlp_layer(x)
         x = self.last(x)
         return x
-
 
 if __name__ == '__main__':
     feat = position_embedding(max_len=20, d_model=512)

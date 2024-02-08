@@ -299,7 +299,7 @@ def timeSince(since, percent):
     rs = es - s
     return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
 
-def model_to_state_dict(model_filepath="trained_model_data/TransformerModel6.pt"):
+def model_to_state_dict(model_filepath="model/trained_model_data/TF_1_small.pt"):
     model = torch.load(model_filepath)
     print("Saving model state dict in ", model_filepath[:-3] + "_statedict.pt")
     torch.save(model.state_dict(), model_filepath[:-3] + "_statedict.pt")

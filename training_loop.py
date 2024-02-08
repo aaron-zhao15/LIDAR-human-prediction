@@ -61,13 +61,13 @@ batch_size = 64
 # Instantiate the model with hyperparameters
 # model = RNN_model(input_size=joint_dims*2, output_size=joint_dims*2, hidden_dim=hidden_size, n_layers=2)
 # model = Encoder_Decoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
-# model = TransformerModel(joint_dims*2, joint_dims*2, 1, 2048, 16, 0.1).to(device)
+# model = TransformerModel(joint_dims*2, joint_dims*2, 1, hidden_size, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
 model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 # model = torch.load('TransformerModel4.pt')
 
 # Define hyperparameters
-n_epochs = 100
+n_epochs = 300
 lr=0.1
 
 # Define Loss, Optimizer
@@ -88,6 +88,6 @@ epoch_losses, evaluations = train_utils.train_masks(n_epochs, model, criterion, 
 
 np.savetxt('model/trained_model_data/epoch_losses_TF_1.gz', epoch_losses)
 np.savetxt('model/trained_model_data/evaluations_TF_1.gz', evaluations)
-torch.save(model, 'model/trained_model_data/TF_1_small.pt')
+torch.save(model.state_dict(), 'model/trained_model_data/TF_1_small_statedict.pt')
 
 
