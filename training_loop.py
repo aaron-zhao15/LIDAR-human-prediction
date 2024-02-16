@@ -6,6 +6,7 @@ from model.TrajectoryDataset import TrajectoryDataset
 
 from model.models import *
 from model.individual_TF import IndividualTF
+from model.gen_model import GPT
 
 import torch
 import torch.nn as nn
@@ -64,7 +65,7 @@ batch_size = 64
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, hidden_size, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
-# model = 
+model = GPT(n_layer=3, n_head=3, n_embd=48, vocab_size=joint_dims, block_size=joint_dims, pdrop=0.1)
 # model = torch.load('TransformerModel4.pt')
 
 # Define hyperparameters
@@ -84,7 +85,7 @@ validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shu
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
-epoch_losses, evaluations = train_utils.train_masks(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
+epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
 np.savetxt('model/trained_model_data/epoch_losses_TF_1.gz', epoch_losses)

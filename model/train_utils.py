@@ -172,7 +172,7 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
         for x, label in train_loader:
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
-            out, hidden = model(x)
+            out, _ = model(x)
             # print(out.shape, label.to(device).float().shape)
             # print(out.shape, label[:,-1:,:].shape)
             loss = criterion(out, label)
