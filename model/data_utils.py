@@ -215,6 +215,8 @@ def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_
         if use_vel:
             i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
             t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        i_seqs = np.append(i_seqs, t_seqs, axis=1)[:, :-1, :]
+        t_seqs = np.append(np.zeros((t_seqs.shape[0], t_seqs.shape[1]-1, t_seqs.shape[2])), t_seqs, axis=1)
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
     
@@ -241,7 +243,7 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
     
-# generate_data_from_hdf_folder("../humoro/mogaze/", seq_len=50, target_offset=25, step_size=10)
+generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=25, step_size=10)
 # sanity_check()
 
 

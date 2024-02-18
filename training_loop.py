@@ -46,7 +46,8 @@ hidden_size = 1024
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
 # dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size)
+dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size)
 
 # print(dataset)
 
@@ -65,6 +66,8 @@ batch_size = 64
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, hidden_size, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
+
+# block_size should be either seq_len or seq_len*2-1, depending on the dataset format
 model = GPT(n_layer=3, n_head=3, n_embd=48, vocab_size=joint_dims*2, block_size=seq_len, pdrop=0.1)
 # model = torch.load('TransformerModel4.pt')
 
