@@ -111,7 +111,7 @@ class PositionalEncoding(nn.Module):
         self.device = device
 
     def forward(self, x):
-        x = x + Variable(self.pe[:, :x.size(1)].contiguous(), requires_grad=False).to(self.device)
+        x = x[:, :, None] + Variable(self.pe[:, :x.size(1)].contiguous(), requires_grad=False).to(self.device)
         return self.dropout(x)
 
 class GPT(nn.Module):
@@ -124,8 +124,12 @@ class GPT(nn.Module):
         self.block_size = block_size
 
         self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(vocab_size, n_embd),
-            wpe = nn.Embedding(block_size, n_embd),
+            # wte = nn.Embedding(vocab_size, n_embd),
+            # not really an embedding but a linear layer to help match shapes
+            wte = nn.Linear(vocab_size, n_embd),
+            # wpe = nn.Embedding(block_size, n_embd),
+            # this uses the positional embedding specified in https://arxiv.org/pdf/2003.08111.pdf
+            wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size),
             drop = nn.Dropout(pdrop),
             h = nn.ModuleList([Block(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1) for _ in range(n_layer)]),
             ln_f = nn.LayerNorm(n_embd),
@@ -206,14 +210,13 @@ class GPT(nn.Module):
 
         # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
-        print(tok_emb.shape)
-        # make embedding for the joint positions?
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
+        print(logits.shape)
 
         # if we are given some desired targets also calculate the loss
         loss = None

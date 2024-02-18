@@ -65,7 +65,7 @@ batch_size = 64
 # model = TransformerModel(joint_dims*2, joint_dims*2, 1, hidden_size, 16, 0.1).to(device)
 # model = EncoderDecoder(input_size=joint_dims*2, hidden_size=hidden_size, num_layer=32, rnn_unit='gru', veloc=False, device=device)
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
-model = GPT(n_layer=3, n_head=3, n_embd=48, vocab_size=joint_dims, block_size=joint_dims, pdrop=0.1)
+model = GPT(n_layer=3, n_head=3, n_embd=48, vocab_size=joint_dims*2, block_size=seq_len, pdrop=0.1)
 # model = torch.load('TransformerModel4.pt')
 
 # Define hyperparameters

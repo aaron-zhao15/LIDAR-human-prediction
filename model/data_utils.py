@@ -201,6 +201,26 @@ def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_v
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
+def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel=True):
+    joint_posns = [read_from_hdf(path)]
+    input_seqs, target_seqs = [], []
+    for joint_posn in joint_posns:
+        j_posn = downsample_data(joint_posn, step_size)
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+        # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
+        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        if use_vel:
+            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+    
+    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    return dataset
+
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
