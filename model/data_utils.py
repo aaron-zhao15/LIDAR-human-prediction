@@ -5,7 +5,7 @@ import numpy as np
 import h5py
 import glob
 import pandas as pd
-from .TrajectoryDataset import TrajectoryDataset
+from model.TrajectoryDataset import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
     """
@@ -223,6 +223,28 @@ def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
+def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=True):
+    joint_posns = read_hdf_from_folder(path)
+    input_seqs, target_seqs = [], []
+    for joint_posn in joint_posns:
+        j_posn = downsample_data(joint_posn, step_size)
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+        # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
+        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        if use_vel:
+            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        i_seqs = np.append(i_seqs, t_seqs, axis=1)[:, :-1, :]
+        t_seqs = np.append(np.zeros((t_seqs.shape[0], t_seqs.shape[1]-1, t_seqs.shape[2])), t_seqs, axis=1)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+    
+    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    return dataset
+
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
@@ -243,7 +265,7 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
     
-generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=25, step_size=10)
+# generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=25, step_size=10)
 # sanity_check()
 
 

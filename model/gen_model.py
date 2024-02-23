@@ -32,18 +32,18 @@ class CausalSelfAttention(nn.Module):
     explicit implementation here to show that there is nothing too scary here.
     """
 
-    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1):
+    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device='cpu'):
         super().__init__()
         assert n_embd % n_head == 0
         # key, query, value projections for all heads, but in a batch
-        self.c_attn = nn.Linear(n_embd, 3 * n_embd)
+        self.c_attn = nn.Linear(n_embd, 3 * n_embd, device=device)
         # output projection
-        self.c_proj = nn.Linear(n_embd, n_embd)
+        self.c_proj = nn.Linear(n_embd, n_embd, device=device)
         # regularization
         self.attn_dropout = nn.Dropout(pdrop)
         self.resid_dropout = nn.Dropout(pdrop)
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size))
+        self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size, device=device))
                                      .view(1, 1, block_size, block_size))
         self.n_head = n_head
         self.n_embd = n_embd
@@ -72,14 +72,14 @@ class CausalSelfAttention(nn.Module):
 class Block(nn.Module):
     """ an unassuming Transformer block """
 
-    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1):
+    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device='cpu'):
         super().__init__()
-        self.ln_1 = nn.LayerNorm(n_embd)
-        self.attn = CausalSelfAttention(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1)
-        self.ln_2 = nn.LayerNorm(n_embd)
+        self.ln_1 = nn.LayerNorm(n_embd, device=device)
+        self.attn = CausalSelfAttention(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device=device)
+        self.ln_2 = nn.LayerNorm(n_embd, device=device)
         self.mlp = nn.ModuleDict(dict(
-            c_fc    = nn.Linear(n_embd, 4 * n_embd),
-            c_proj  = nn.Linear(4 * n_embd, n_embd),
+            c_fc    = nn.Linear(n_embd, 4 * n_embd, device=device),
+            c_proj  = nn.Linear(4 * n_embd, n_embd, device=device),
             act     = NewGELU(),
             dropout = nn.Dropout(pdrop),
         ))
@@ -117,24 +117,24 @@ class PositionalEncoding(nn.Module):
 class GPT(nn.Module):
     """ GPT Language Model """
 
-    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1):
+    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device='cpu'):
         super().__init__()
         assert vocab_size is not None
         assert block_size is not None
         self.block_size = block_size
 
         self.transformer = nn.ModuleDict(dict(
-            # wte = nn.Embedding(vocab_size, n_embd),
+            # wte = nn.Embedding(vocab_size, n_embd, device=device),
             # not really an embedding but a linear layer to help match shapes
-            wte = nn.Linear(vocab_size, n_embd),
-            # wpe = nn.Embedding(block_size, n_embd),
+            wte = nn.Linear(vocab_size, n_embd, device=device),
+            wpe = nn.Embedding(block_size, n_embd, device=device),
             # this uses the positional embedding specified in https://arxiv.org/pdf/2003.08111.pdf
-            wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size),
+            # wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size, device=device),
             drop = nn.Dropout(pdrop),
-            h = nn.ModuleList([Block(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1) for _ in range(n_layer)]),
-            ln_f = nn.LayerNorm(n_embd),
+            h = nn.ModuleList([Block(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device=device) for _ in range(n_layer)]),
+            ln_f = nn.LayerNorm(n_embd, device=device),
         ))
-        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
+        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -216,7 +216,7 @@ class GPT(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
-        print(logits.shape)
+        # print(logits.shape)
 
         # if we are given some desired targets also calculate the loss
         loss = None
@@ -238,19 +238,21 @@ class GPT(nn.Module):
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond)
             # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / temperature
+            logits = logits[:, -1:0, :] / temperature
             # optionally crop the logits to only the top k options
             if top_k is not None:
                 v, _ = torch.topk(logits, top_k)
                 logits[logits < v[:, [-1]]] = -float('Inf')
             # apply softmax to convert logits to (normalized) probabilities
-            probs = F.softmax(logits, dim=-1)
-            # either sample from the distribution or take the most likely element
-            if do_sample:
-                idx_next = torch.multinomial(probs, num_samples=1)
-            else:
-                _, idx_next = torch.topk(probs, k=1, dim=-1)
+            idx_next = logits
+            # probs = F.softmax(logits, dim=-1)
+            # # either sample from the distribution or take the most likely element
+            # if do_sample:
+            #     idx_next = torch.multinomial(probs, num_samples=1)
+            # else:
+            #     _, idx_next = torch.topk(probs, k=1, dim=-1)
             # append sampled index to the running sequence and continue
+            # print(idx.shape, idx_next.shape)
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx

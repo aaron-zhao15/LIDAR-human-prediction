@@ -28,7 +28,7 @@ else:
 joint_dims = 66
 # joint_dims = 2
 seq_len = 50
-target_offset = 25
+target_offset = 50
 step_size = 1
 hidden_size = 1024
 # hidden_size = 64
@@ -68,12 +68,13 @@ batch_size = 64
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
-model = GPT(n_layer=3, n_head=3, n_embd=48, vocab_size=joint_dims*2, block_size=seq_len, pdrop=0.1)
+model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims*2, block_size=seq_len*2-1, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
+# model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
 
 # Define hyperparameters
-n_epochs = 300
-lr=0.1
+n_epochs = 10
+lr=1e-2
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
@@ -91,8 +92,8 @@ optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.paramet
 epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_TF_1.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_TF_1.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/TF_1_small_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_GT_bad.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_GT_bad.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/GT_bad_small_statedict.pt')
 
 

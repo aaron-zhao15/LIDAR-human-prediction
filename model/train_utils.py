@@ -173,10 +173,10 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
             x, label = x.to(device).float(), label.to(device).float()
             counter += 1
             out, _ = model(x)
-
+            
             # masked label and output comparison
-            label = label[:, 49:, :]
-            out = out[:, 49:, :]
+            # label = label[:, 49:, :]
+            # out = out[:, 49:, :]
             loss = criterion(out, label)
             optimizer.optimizer.zero_grad()
             loss.backward()
