@@ -175,8 +175,8 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
             out, _ = model(x)
             
             # masked label and output comparison
-            # label = label[:, 49:, :]
-            # out = out[:, 49:, :]
+            label = label[:, 49:, :]
+            out = out[:, 49:, :]
             loss = criterion(out, label)
             optimizer.optimizer.zero_grad()
             loss.backward()
@@ -193,7 +193,9 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
             print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
         epoch_times.append(current_time-start_time)
     print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
-    print("Test Loss: {}".format(evaluate_standard(model, test_loader, criterion, device)))
+    test_loss = evaluate_standard(model, test_loader, criterion, device)
+    print("Test Loss: {}".format(test_loss))
+    evaluations.append(test_loss)
     return epoch_losses, evaluations
 
 def evaluate_standard(model, test_loader, criterion, device):
@@ -211,6 +213,8 @@ def evaluate_standard(model, test_loader, criterion, device):
             # Forward pass to make predictions using the model
             out, hidden = model(x)
             # Calculate the MSE for the batch
+            label = label[:, 49:, :]
+            out = out[:, 49:, :]
             loss = criterion(out, label)
             mse = loss.item()
             # Append the MSE value to the list
