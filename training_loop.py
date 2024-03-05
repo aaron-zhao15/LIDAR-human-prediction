@@ -29,7 +29,7 @@ joint_dims = 66
 # joint_dims = 2
 seq_len = 50
 target_offset = 50
-step_size = 20
+step_size = 10
 hidden_size = 1024
 # hidden_size = 64
 
@@ -45,7 +45,7 @@ hidden_size = 1024
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
