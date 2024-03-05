@@ -175,10 +175,8 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
             out, _ = model(x)
             
             # masked label and output comparison
-            label = label[:, 49:, :]
-            out = out[:, 49:, :]
             loss = criterion(out, label)
-            optimizer.optimizer.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
@@ -199,6 +197,72 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
     return epoch_losses, evaluations
 
 def evaluate_standard(model, test_loader, criterion, device):
+    # Set the model in evaluation mode (no gradient computation)
+    model = model.eval()
+
+    # Initialize a variable to store MSE
+    mse_values = []
+
+    # Iterate through the test DataLoader
+    with torch.no_grad():
+        for x, label in test_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            
+            # Forward pass to make predictions using the model
+            out, hidden = model(x)
+            # Calculate the MSE for the batch
+            loss = criterion(out, label)
+            mse = loss.item()
+            # Append the MSE value to the list
+            mse_values.append(mse)
+
+    # Calculate the overall evaluation metric (average MSE)
+    average_mse = np.mean(mse_values)
+
+    return average_mse
+
+
+def train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
+    epoch_times = []
+    epoch_losses = []
+    evaluations = []
+    for epoch in range(1, n_epochs + 1):
+        model = model.train()
+        
+        start_time = time.perf_counter()
+        # h = model.init_hidden(batch_size)
+        losses = []
+        counter = 0
+        for x, label in train_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            counter += 1
+            out, _ = model(x)
+            
+            # masked label and output comparison
+            label = label[:, 49:, :]
+            out = out[:, 49:, :]
+            loss = criterion(out, label)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+            if counter%200 == 0:
+                print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
+        epoch_losses.append(np.mean(losses))
+        evaluation = evaluate_GT(model, validate_loader, criterion, device)
+        evaluations.append(evaluation)
+        current_time = time.perf_counter()
+        if epoch > 0:
+            print("Epoch {}/{} Done, Total Loss: {}, Validation Loss: {}".format(epoch, n_epochs, np.mean(losses), evaluation))
+            print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
+        epoch_times.append(current_time-start_time)
+    print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
+    test_loss = evaluate_GT(model, test_loader, criterion, device)
+    print("Test Loss: {}".format(test_loss))
+    evaluations.append(test_loss)
+    return epoch_losses, evaluations
+
+def evaluate_GT(model, test_loader, criterion, device):
     # Set the model in evaluation mode (no gradient computation)
     model = model.eval()
 

@@ -232,7 +232,7 @@ class GPT(nn.Module):
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
-        idx_tot = []
+        idx_tot = idx.clone().detach()
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:, :]
@@ -253,8 +253,7 @@ class GPT(nn.Module):
             # else:
             #     _, idx_next = torch.topk(probs, k=1, dim=-1)
             # append sampled index to the running sequence and continue
-            # print(idx.shape, idx_next.shape)
+            print(idx_tot.shape)
             idx = torch.cat((idx, idx_next), dim=1)
-            idx_tot.append(idx_next.cpu())
-
+            idx_tot = torch.cat((idx_tot, idx_next), dim=1)
         return idx, idx_tot

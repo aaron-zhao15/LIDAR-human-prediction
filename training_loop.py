@@ -29,7 +29,7 @@ joint_dims = 66
 # joint_dims = 2
 seq_len = 50
 target_offset = 50
-step_size = 1
+step_size = 20
 hidden_size = 1024
 # hidden_size = 64
 
@@ -45,9 +45,9 @@ hidden_size = 1024
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-# dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
-# dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size)
-dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
+dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
+# dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
 
 # print(dataset)
@@ -75,7 +75,7 @@ model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=s
 
 # Define hyperparameters
 n_epochs = 500
-lr=1e-3
+lr=1e-2
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
@@ -87,14 +87,15 @@ train_loader = DataLoader(train, batch_size=batch_size, num_workers=0, shuffle=T
 test_loader = DataLoader(test, batch_size=batch_size, num_workers=0, shuffle=True)
 validate_loader = DataLoader(validate, batch_size=batch_size, num_workers=0, shuffle=True)
 
-# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# optimizer = NoamOpt(512, 1, len(train_loader)*10, torch.optim.Adam(model.parameters(), lr=lr))
 
 epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
+# epoch_losses, evaluations = train_utils.train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_GT_iso1.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_GT_iso1.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/GT_iso1_small_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_GT_general_direct.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_GT_general_direct.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/GT_general_direct_statedict.pt')
 
 
