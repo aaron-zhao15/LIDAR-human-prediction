@@ -29,7 +29,7 @@ joint_dims = 66
 # joint_dims = 2
 seq_len = 50
 target_offset = 50
-step_size = 10
+step_size = 1
 hidden_size = 1024
 # hidden_size = 64
 
@@ -45,8 +45,8 @@ hidden_size = 1024
 # dataset = MogazeDataset(input_seqs, target_seqs, input_vel_seqs, target_vel_seqs)
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size, use_vel=False)
-# dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
+# dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size, use_vel=False)
+dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
 
@@ -94,8 +94,8 @@ epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterio
 # epoch_losses, evaluations = train_utils.train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_GT_general_direct.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_GT_general_direct.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/GT_general_direct_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_GT_iso2_direct.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_GT_iso2_direct.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/GT_iso2_direct_statedict.pt')
 
 
