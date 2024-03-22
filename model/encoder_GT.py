@@ -91,30 +91,37 @@ class Block(nn.Module):
         x = x + self.mlpf(self.ln_2(x))
         return x
     
-class PositionalEncoding(nn.Module):
-    """
-    Implement the PE function.
-    """
+class BertBlock(nn.Module):
+    """ Feed forward block """
 
-    def __init__(self, d_model, dropout, max_len=5000, device='cpu'):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+    def __init__(self, n_head, n_embd, pdrop=0.1, device='cpu'):
+        super().__init__()
+        self.attention = nn.MultiheadAttention(n_embd, n_head)
+        self.feed_forward = nn.ModuleDict(dict(
+            c_fc    = nn.Linear(n_embd, 4 * n_embd, device=device),
+            c_proj  = nn.Linear(4 * n_embd, n_embd, device=device),
+            act     = NewGELU(),
+            dropout = nn.Dropout(pdrop),
+        ))
+        self.input_sublayer = nn.ModuleDict(dict(
+            norm    = nn.LayerNorm(n_embd, device=device),
+            dropout = nn.Dropout(pdrop)
+        ))
+        self.output_sublayer = nn.ModuleDict(dict(
+            norm    = nn.LayerNorm(n_embd, device=device),
+            dropout = nn.Dropout(pdrop)
+        ))
+        self.dropout = nn.Dropout(p=pdrop)
+        m = self.feed_forward
+        self.feed_forward_f = lambda x: m.dropout(m.c_proj(m.act(m.c_fc(x))))
+        self.layer_f = lambda x, forward, sublayer: x + sublayer.dropout(forward(sublayer.norm(x)))
 
-        # Compute the positional encodings once in log space.
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-        self.device = device
-
-    def forward(self, x):
-        x = x[:, :, None] + Variable(self.pe[:, :x.size(1)].contiguous(), requires_grad=False).to(self.device)
+    def forward(self, x, mask):
+        x = self.layer_f(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask), self.input_sublayer)
+        x = self.layer_f(x, self.feed_forward_f, self.output_sublayer)
         return self.dropout(x)
 
-class GPT(nn.Module):
+class Encoder_GPT(nn.Module):
     """ GPT Language Model """
 
     def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device='cpu'):
@@ -131,7 +138,7 @@ class GPT(nn.Module):
             # this uses the positional embedding specified in https://arxiv.org/pdf/2003.08111.pdf
             # wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size, device=device),
             drop = nn.Dropout(pdrop),
-            h = nn.ModuleList([Block(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device=device) for _ in range(n_layer)]),
+            h = nn.ModuleList([BertBlock(n_head, n_embd, pdrop=0.1, device=device) for _ in range(n_layer)]),
             ln_f = nn.LayerNorm(n_embd, device=device),
         ))
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
@@ -157,51 +164,6 @@ class GPT(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def configure_optimizers(self, train_config):
-        """
-        This long function is unfortunately doing something very simple and is being very defensive:
-        We are separating out all parameters of the model into two buckets: those that will experience
-        weight decay for regularization and those that won't (biases, and layernorm/embedding weights).
-        We are then returning the PyTorch optimizer object.
-        """
-
-        # separate out all parameters to those that will and won't experience regularizing weight decay
-        decay = set()
-        no_decay = set()
-        whitelist_weight_modules = (torch.nn.Linear, )
-        blacklist_weight_modules = (torch.nn.LayerNorm, torch.nn.Embedding)
-        for mn, m in self.named_modules():
-            for pn, p in m.named_parameters():
-                fpn = '%s.%s' % (mn, pn) if mn else pn # full param name
-                # random note: because named_modules and named_parameters are recursive
-                # we will see the same tensors p many many times. but doing it this way
-                # allows us to know which parent module any tensor p belongs to...
-                if pn.endswith('bias'):
-                    # all biases will not be decayed
-                    no_decay.add(fpn)
-                elif pn.endswith('weight') and isinstance(m, whitelist_weight_modules):
-                    # weights of whitelist modules will be weight decayed
-                    decay.add(fpn)
-                elif pn.endswith('weight') and isinstance(m, blacklist_weight_modules):
-                    # weights of blacklist modules will NOT be weight decayed
-                    no_decay.add(fpn)
-
-        # validate that we considered every parameter
-        param_dict = {pn: p for pn, p in self.named_parameters()}
-        inter_params = decay & no_decay
-        union_params = decay | no_decay
-        assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params), )
-        assert len(param_dict.keys() - union_params) == 0, "parameters %s were not separated into either decay/no_decay set!" \
-                                                    % (str(param_dict.keys() - union_params), )
-
-        # create the pytorch optimizer object
-        optim_groups = [
-            {"params": [param_dict[pn] for pn in sorted(list(decay))], "weight_decay": train_config.weight_decay},
-            {"params": [param_dict[pn] for pn in sorted(list(no_decay))], "weight_decay": 0.0},
-        ]
-        optimizer = torch.optim.AdamW(optim_groups, lr=train_config.learning_rate, betas=train_config.betas)
-        return optimizer
-
     def forward(self, idx, targets=None):
         device = idx.device
         b, t, s = idx.size()
@@ -217,13 +179,7 @@ class GPT(nn.Module):
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
         # print(logits.shape)
-
-        # if we are given some desired targets also calculate the loss
-        loss = None
-        if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
-
-        return logits, loss
+        return logits
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=1.0, do_sample=False, top_k=None):
@@ -246,12 +202,6 @@ class GPT(nn.Module):
                 logits[logits < v[:, [-1]]] = -float('Inf')
             # apply softmax to convert logits to (normalized) probabilities
             idx_next = logits
-            # probs = F.softmax(logits, dim=-1)
-            # # either sample from the distribution or take the most likely element
-            # if do_sample:
-            #     idx_next = torch.multinomial(probs, num_samples=1)
-            # else:
-            #     _, idx_next = torch.topk(probs, k=1, dim=-1)
             # append sampled index to the running sequence and continue
             print(idx_tot.shape)
             idx = torch.cat((idx, idx_next), dim=1)
