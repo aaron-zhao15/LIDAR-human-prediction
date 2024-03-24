@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from .models import *
 from .individual_TF import IndividualTF
 from .transformer.batch import subsequent_mask
 

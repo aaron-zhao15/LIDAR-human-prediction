@@ -6,7 +6,8 @@ from model.TrajectoryDataset import TrajectoryDataset
 
 from model.models import *
 from model.individual_TF import IndividualTF
-from model.gen_model import GPT
+from model.decoder_GT import GPT
+from model.encoder_GT import Encoder_GPT
 
 import torch
 import torch.nn as nn
@@ -69,7 +70,8 @@ batch_size = 64
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
-model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
+# model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len*2-1, pdrop=0.1, device=device)
+model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len*2-1, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
 
