@@ -6,6 +6,7 @@ import h5py
 import glob
 import pandas as pd
 from model.TrajectoryDataset import TrajectoryDataset
+# from TrajectoryDataset import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
     """
@@ -145,7 +146,8 @@ def generate_data_from_csv_folder(path, seq_len, target_offset, step_size, use_v
     joint_posns = read_csv_from_folder(path)
     input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn, step_size)
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
@@ -165,7 +167,8 @@ def generate_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel
     joint_posns = [read_from_hdf(path)]
     input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn, step_size)
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
@@ -185,7 +188,8 @@ def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_v
     joint_posns = read_hdf_from_folder(path)
     input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn, step_size)
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
@@ -201,11 +205,12 @@ def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_v
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
-def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel=True):
+def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel=False):
     joint_posns = [read_from_hdf(path)]
     input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn, step_size)
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
@@ -223,11 +228,12 @@ def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
-def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=True):
+def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=False):
     joint_posns = read_hdf_from_folder(path)
     input_seqs, target_seqs = [], []
     for joint_posn in joint_posns:
-        j_posn = downsample_data(joint_posn, step_size)
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
@@ -264,7 +270,12 @@ def sanity_check():
     print(np.array(target_sequence).shape)
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
-    
+
+# seq_len = 50
+# target_offset = 50
+# step_size = 20
+# dataset = generate_data_from_hdf_file("../humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
+
 
 
 # generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=50, step_size=1)

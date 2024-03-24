@@ -27,9 +27,9 @@ else:
 
 joint_dims = 66
 # joint_dims = 2
-seq_len = 50
-target_offset = 50
-step_size = 1
+seq_len = 60
+target_offset = 60
+step_size = 20
 hidden_size = 1024
 # hidden_size = 64
 
@@ -69,13 +69,13 @@ batch_size = 64
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
-model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len*2-1, pdrop=0.1, device=device)
+model = GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
 
 # Define hyperparameters
-n_epochs = 500
-lr=1e-2
+n_epochs = 100
+lr=1e-4
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
@@ -94,8 +94,8 @@ epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterio
 # epoch_losses, evaluations = train_utils.train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_GT_iso2_direct.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_GT_iso2_direct.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/GT_iso2_direct_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_GT_offset1_direct.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_GT_offset1_direct.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/GT_offset1_direct_statedict.pt')
 
 

@@ -90,29 +90,6 @@ class Block(nn.Module):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlpf(self.ln_2(x))
         return x
-    
-class PositionalEncoding(nn.Module):
-    """
-    Implement the PE function.
-    """
-
-    def __init__(self, d_model, dropout, max_len=5000, device='cpu'):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        # Compute the positional encodings once in log space.
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-        self.device = device
-
-    def forward(self, x):
-        x = x[:, :, None] + Variable(self.pe[:, :x.size(1)].contiguous(), requires_grad=False).to(self.device)
-        return self.dropout(x)
 
 class GPT(nn.Module):
     """ GPT Language Model """
@@ -129,7 +106,6 @@ class GPT(nn.Module):
             wte = nn.Linear(vocab_size, n_embd, device=device),
             wpe = nn.Embedding(block_size, n_embd, device=device),
             # this uses the positional embedding specified in https://arxiv.org/pdf/2003.08111.pdf
-            # wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size, device=device),
             drop = nn.Dropout(pdrop),
             h = nn.ModuleList([Block(n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device=device) for _ in range(n_layer)]),
             ln_f = nn.LayerNorm(n_embd, device=device),
@@ -232,7 +208,6 @@ class GPT(nn.Module):
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
-        idx_tot = idx.clone().detach()
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:, :]
@@ -253,7 +228,5 @@ class GPT(nn.Module):
             # else:
             #     _, idx_next = torch.topk(probs, k=1, dim=-1)
             # append sampled index to the running sequence and continue
-            print(idx_tot.shape)
             idx = torch.cat((idx, idx_next), dim=1)
-            idx_tot = torch.cat((idx_tot, idx_next), dim=1)
-        return idx, idx_tot
+        return idx

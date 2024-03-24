@@ -239,8 +239,8 @@ def train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loade
             out, _ = model(x)
             
             # masked label and output comparison
-            label = label[:, 49:, :]
-            out = out[:, 49:, :]
+            label = label[:, -1:, :]
+            out = out[:, -1:, :]
             loss = criterion(out, label)
             optimizer.zero_grad()
             loss.backward()
@@ -277,8 +277,8 @@ def evaluate_GT(model, test_loader, criterion, device):
             # Forward pass to make predictions using the model
             out, hidden = model(x)
             # Calculate the MSE for the batch
-            label = label[:, 49:, :]
-            out = out[:, 49:, :]
+            label = label[:, 50:, :]
+            out = out[:, 50:, :]
             loss = criterion(out, label)
             mse = loss.item()
             # Append the MSE value to the list
