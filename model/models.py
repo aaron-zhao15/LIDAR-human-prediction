@@ -266,34 +266,6 @@ class Encoder_Decoder(nn.Module):
             count += 1
         return outputs_enc, outputs_dec
 
-class Self_Attention_Encoder_Decoder(nn.Module):
-    def __init__(self, input_size, rnn_unit, dropout_out, linear, embedding, residual=False, 
-                 veloc=True, pos_embed=True, device="cuda"):
-        super(Encoder, self).__init__()
-        self.input_size = input_size
-        self.residual = residual
-        self.rnn = rnn_unit
-        self.dropout_out = dropout_out
-        self.linear = linear
-        self.veloc = veloc
-        self.pos_embed = pos_embed
-        self.position_embeding = embedding
-
-    def forward_seq(self, input, hidden=None):
-        pred_pre = input[:,:,0:self.input_size].clone()
-        if hidden is None:
-            output, hidden_state = self.rnn(input)
-        else:
-            # print(input.dtype, hidden.dtype)
-            output, hidden_state = self.rnn(input, hidden)
-        pred = self.linear(self.dropout_out(output))
-
-        if self.residual:
-            pred = pred + pred_pre
-
-        return pred, hidden_state
-
-
 
 def position_embedding(d_model, max_len=150): # +25*4
     if d_model <= 0:

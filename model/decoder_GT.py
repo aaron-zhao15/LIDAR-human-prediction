@@ -91,7 +91,7 @@ class Block(nn.Module):
         x = x + self.mlpf(self.ln_2(x))
         return x
 
-class GPT(nn.Module):
+class Decoder_GPT(nn.Module):
     """ GPT Language Model """
 
     def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, pdrop=0.1, device='cpu'):
