@@ -15,8 +15,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 
-from decoder_GT import Decoder_GPT
-from encoder_GT import Encoder_GPT
+from model.decoder_GT import Decoder_GPT
+from model.encoder_GT import Encoder_GPT
 
 # -----------------------------------------------------------------------------
 

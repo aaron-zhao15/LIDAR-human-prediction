@@ -1,6 +1,7 @@
 mogaze_data
-model/trained_model_data/*.pt
-!model/trained_model_data/GT_*statedict.pt
+# model/trained_model_data/*.pt
+# !model/trained_model_data/GT_*statedict.pt
+# !model/trained_model_data/ED_GT_*statedict.pt
 .DS_Store
 model/.DS_Store
 model/__pycache__/

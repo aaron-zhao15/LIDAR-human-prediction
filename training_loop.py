@@ -8,6 +8,7 @@ from model.models import *
 from model.individual_TF import IndividualTF
 from model.decoder_GT import Decoder_GPT
 from model.encoder_GT import Encoder_GPT
+from model.encoder_decoder_GT import Encoder_Decoder_GPT
 
 import torch
 import torch.nn as nn
@@ -30,7 +31,7 @@ joint_dims = 66
 # joint_dims = 2
 seq_len = 60
 target_offset = 60
-step_size = 20
+step_size = 60
 hidden_size = 1024
 # hidden_size = 64
 
@@ -70,8 +71,9 @@ batch_size = 64
 # model = IndividualTF(enc_inp_size=joint_dims*2, dec_inp_size=(joint_dims*2)+(joint_dims//3), dec_out_size=joint_dims*2, device=device)
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
-# model = Decoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len*2-1, pdrop=0.1, device=device)
-model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len*2-1, pdrop=0.1, device=device)
+# model = Decoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
+# model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
+model = Encoder_Decoder_GPT(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
 
@@ -96,8 +98,8 @@ epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterio
 # epoch_losses, evaluations = train_utils.train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_GT_offset1_direct.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_GT_offset1_direct.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/GT_offset1_direct_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_ED_GT_offset60_direct.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_ED_GT_offset60_direct.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/ED_GT_offset60_direct_statedict.pt')
 
 
