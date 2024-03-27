@@ -2,7 +2,7 @@ import time
 import numpy as np
 import logging
 from model import data_utils, train_utils
-from model.TrajectoryDataset import TrajectoryDataset
+from model.datasets import TrajectoryDataset
 
 from model.models import *
 from model.individual_TF import IndividualTF
@@ -28,7 +28,6 @@ else:
     device = torch.device("cpu")
 
 joint_dims = 66
-# joint_dims = 2
 seq_len = 60
 target_offset = 60
 step_size = 60

@@ -5,8 +5,10 @@ import numpy as np
 import h5py
 import glob
 import pandas as pd
-from model.TrajectoryDataset import TrajectoryDataset
-# from TrajectoryDataset import TrajectoryDataset
+from model.datasets import TrajectoryDataset
+import csv
+import copy
+# from datasets import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
     """
@@ -25,7 +27,16 @@ def read_from_csv(csv_path):
     Read the data from a .txt file into a numpy array and return it.
     @csv_path: The string pathname of the specified .txt file.
     """
-    return np.genfromtxt(csv_path, delimiter=',')
+    # np_array = np.genfromtxt(csv_path, delimiter=',')
+    np_array = []
+    with open(csv_path, newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        try:
+            np_array = np.asarray(data)
+        except Exception as e:
+            np_array = data
+    return np_array
 
 def read_hdf_from_folder(folder_path="../humoro/mogaze/"):
     """
@@ -251,6 +262,29 @@ def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, us
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
+def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
+    joint_posns = [read_from_hdf(person_path+"_human_data.hdf5")]
+    tasks = read_from_csv(person_path+"_instructions.csv")
+    input_seqs, targets = [], []
+    for joint_posn in joint_posns:
+        traj_start = 0
+        i_seqs = []
+        for task in tasks:
+            traj_end = int(task[0])
+            # j_posn = downsample_data(joint_posn, step_size)
+            j_posn = joint_posn
+            j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+            # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+            # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+            i_seq = copy.deepcopy(j_posn[traj_start:traj_end:step_size])
+            i_seqs.append(i_seq)
+            targets.append(int(task[1]))
+            traj_start = traj_end
+        input_seqs.extend(i_seqs)
+        targets.extend(targets)
+    dataset = TrajectoryDataset(input_seqs, targets, use_vel)
+    return dataset
+
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
@@ -276,7 +310,7 @@ def sanity_check():
 # step_size = 20
 # dataset = generate_data_from_hdf_file("../humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 
-
+# dataset = generate_intent_data_from_person("../humoro/mogaze/p1_1")
 
 # generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=50, step_size=1)
 

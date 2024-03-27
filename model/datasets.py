@@ -48,12 +48,6 @@ class generate_train_data(Dataset):
         # Select the data around the sampled points
         data_sel = copy.deepcopy(data[idx:idx + self._total_frames, :] )
 
-        # decoder_inputs = data_sel[self._source_seq_len - 1:self._source_seq_len + self._target_seq_len - 1]
-        # decoder_outputs = data_sel[self._source_seq_len:]
-        # mirror for data augmentation
-        # if random.random() > 0.5:
-        #     data_sel = np.flip(data_sel, axis=0).copy()
-
         encoder_inputs = data_sel[0:self._source_seq_len - 1]
         decoder_target = data_sel[self._source_seq_len-1:]
 
