@@ -285,6 +285,22 @@ def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
     dataset = TrajectoryDataset(input_seqs, targets, use_vel)
     return dataset
 
+def euler_xyz_to_rotation_matrix(angles):
+    def R_y(theta):
+        return np.array([[np.cos(theta), 0, np.sin(theta)],
+                        [0, 1, 0],
+                        [-np.sin(theta), 0, np.cos(theta)]])
+    def R_z(theta):
+        return np.array([[np.cos(theta), -np.sin(theta), 0],
+                        [np.sin(theta), np.cos(theta), 0],
+                        [0, 0, 1]])
+    def R_x(theta):
+        return np.array([[1, 0, 0],
+                        [0, np.cos(theta), -np.sin(theta)],
+                        [0, np.sin(theta), np.cos(theta)]])
+    X, Y, Z = R_x(angles[0]), R_y(angles[1]), R_z(angles[2])
+    return Z@Y@X
+
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
