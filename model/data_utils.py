@@ -303,7 +303,11 @@ def euler_xyz_to_rotation_matrix(angles):
     return Z@Y@X
 
 def joint_angles_to_rotation_matrix(joint_angles):
-    return None
+    # joint angles are assumed to be 66xN, so we'll reshape to 3x22xN
+    joint_angles_reshaped = joint_angles.reshape((22, 3, -1))
+    base_translation = joint_angles_reshaped[:, 0, :]
+    euler_angles = joint_angles_reshaped[:, 1:, :]
+
 
 def sanity_check():
     # dataset = read_from_folder()
