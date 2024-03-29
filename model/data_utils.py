@@ -5,11 +5,11 @@ import numpy as np
 import h5py
 import glob
 import pandas as pd
-from model.datasets import TrajectoryDataset
+# from model.datasets import TrajectoryDataset
 import csv
 import copy
-from pytorch3d.transforms import matrix__to_rotation6d
-# from datasets import TrajectoryDataset
+from pytorch3d.transforms import matrix_to_rotation_6d
+from datasets import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
     """
@@ -289,25 +289,26 @@ def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
 def euler_xyz_to_rotation_matrix(angles):
     def R_y(theta):
         return np.array([[np.cos(theta), 0, np.sin(theta)],
-                        [0, 1, 0],
-                        [-np.sin(theta), 0, np.cos(theta)]])
+                         [0, 1, 0],
+                         [-np.sin(theta), 0, np.cos(theta)]])
     def R_z(theta):
         return np.array([[np.cos(theta), -np.sin(theta), 0],
-                        [np.sin(theta), np.cos(theta), 0],
-                        [0, 0, 1]])
+                         [np.sin(theta), np.cos(theta), 0],
+                         [0, 0, 1]])
     def R_x(theta):
         return np.array([[1, 0, 0],
-                        [0, np.cos(theta), -np.sin(theta)],
-                        [0, np.sin(theta), np.cos(theta)]])
+                         [0, np.cos(theta), -np.sin(theta)],
+                         [0, np.sin(theta), np.cos(theta)]])
     X, Y, Z = R_x(angles[0]), R_y(angles[1]), R_z(angles[2])
     return Z@Y@X
 
 def joint_angles_to_rotation_matrix(joint_angles):
     # joint angles are assumed to be 66xN, so we'll reshape to 3x22xN
     joint_angles_reshaped = joint_angles.reshape((22, 3, -1))
-    base_translation = joint_angles_reshaped[:, 0, :]
-    euler_angles = joint_angles_reshaped[:, 1:, :]
-
+    base_translation = joint_angles_reshaped[0:1, :, :]
+    euler_angles = joint_angles_reshaped[1:, :, :]
+    rotation_mats = np.array([euler_xyz_to_rotation_matrix(angles) for angles in euler_angles])
+    print(rotation_mats.shape)
 
 def sanity_check():
     # dataset = read_from_folder()
@@ -328,6 +329,9 @@ def sanity_check():
     print(np.array(target_sequence).shape)
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
+
+joint_posns = read_from_hdf("../humoro/mogaze/p1_1_human_data.hdf5")
+joint_angles_to_rotation_matrix(joint_posns)
 
 # seq_len = 50
 # target_offset = 50
