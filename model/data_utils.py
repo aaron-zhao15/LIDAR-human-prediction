@@ -8,6 +8,7 @@ import pandas as pd
 from model.datasets import TrajectoryDataset
 import csv
 import copy
+from pytorch3d.transforms import matrix__to_rotation6d
 # from datasets import TrajectoryDataset
 
 def read_from_hdf(hdf_path):
@@ -300,6 +301,9 @@ def euler_xyz_to_rotation_matrix(angles):
                         [0, np.sin(theta), np.cos(theta)]])
     X, Y, Z = R_x(angles[0]), R_y(angles[1]), R_z(angles[2])
     return Z@Y@X
+
+def joint_angles_to_rotation_matrix(joint_angles):
+    return None
 
 def sanity_check():
     # dataset = read_from_folder()
