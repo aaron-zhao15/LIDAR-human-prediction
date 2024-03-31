@@ -289,8 +289,11 @@ def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
     dataset = TrajectoryDataset(input_seqs, targets, use_vel)
     return dataset
 
+
+
 def euler_xyz_to_rotation_matrix(angles):
-    # :param angles must be 3xN
+    # :param angles must be Nx3
+    angles = angles.T
     def R_y(thetas):
         return torch.Tensor([[[torch.cos(theta), 0, torch.sin(theta)],
                               [0, 1, 0],
@@ -312,22 +315,23 @@ def pose_6d_to_rotation_matrix(joint_angles):
     base_translation = joint_angles_reshaped[:, 0, :]
     euler_angles = joint_angles_reshaped[:, 1:, :]
 
-    joint_mats = [euler_xyz_to_rotation_matrix(euler_angles[:, i, :].T) for i in range(euler_angles.shape[1])]
+    joint_mats = [euler_xyz_to_rotation_matrix(euler_angles[:, i, :]) for i in range(euler_angles.shape[1])]
     continuous_6d = [matrix_to_rotation_6d(joint_mat) for joint_mat in joint_mats]
     collected_6d = torch.cat(continuous_6d, dim=1)
     pose_6d = torch.cat((base_translation, collected_6d), dim=1)
     return pose_6d
 
-def rotation_matrix_from_pose_6d(base_with_pose_6d):
+def euler_angles_from_pose_6d(base_with_pose_6d):
     # pose is assumed to be Nx129
     base_translation = base_with_pose_6d[:, 0:3]
-    pose_6d = base_with_pose_6d[:, 3:]
-    rotation_mats = [rotation_6d_to_matrix(pose) for pose in pose_6d]
-    return rotation_mats, base_translation
+    pose_6d = base_with_pose_6d[:, 3:].reshape((-1, 21, 6))
+    rotation_mats = [rotation_6d_to_matrix(pose_6d[:, i, :]) for i in range(pose_6d.shape[1])]
+    euler_angles = [euler_from_matrix(matrix) for matrix in rotation_mats]
+    euler_angles = torch.cat(euler_angles, dim=1)
+    full_euler_angles = torch.cat((base_translation, euler_angles), dim=1)
+    return full_euler_angles
 
-def euler_from_matrix(matrix, axes='sxyz'):
-# https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
-    
+def euler_from_matrix(matrices, axes='sxyz'):
     # Return Euler angles from rotation matrix for specified axis sequence.
     #
     # axes : One of 24 axis sequences as string or encoded tuple
@@ -345,7 +349,7 @@ def euler_from_matrix(matrix, axes='sxyz'):
     # ...    R1 = euler_matrix(axes=axes, *euler_from_matrix(R0, axes))
     # ...    if not np.allclose(R0, R1): print axes, "failed"
     _NEXT_AXIS = [1, 2, 0, 1]
-    _EPS = np.finfo(float).eps * 4.0
+    _EPS = torch.finfo(float).eps * 4.0
     _AXES2TUPLE = {
         'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
         'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
@@ -363,34 +367,43 @@ def euler_from_matrix(matrix, axes='sxyz'):
     i = firstaxis
     j = _NEXT_AXIS[i + parity]
     k = _NEXT_AXIS[i - parity + 1]
-
-    M = np.array(matrix, dtype=np.float64, copy=False)[:3, :3]
-    if repetition:
-        sy = math.sqrt(M[i, j] * M[i, j] + M[i, k] * M[i, k])
-        if sy > _EPS:
-            ax = math.atan2(M[i, j], M[i, k])
-            ay = math.atan2(sy, M[i, i])
-            az = math.atan2(M[j, i], -M[k, i])
+    
+    angle_list = []
+    for matrix in matrices:
+        M = torch.Tensor(matrix)[:3, :3]
+        if repetition:
+            sy = torch.sqrt(M[i, j] * M[i, j] + M[i, k] * M[i, k])
+            if sy > _EPS:
+                ax = torch.atan2(M[i, j], M[i, k])
+                ay = torch.atan2(sy, M[i, i])
+                az = torch.atan2(M[j, i], -M[k, i])
+            else:
+                ax = torch.atan2(-M[j, k], M[j, j])
+                ay = torch.atan2(sy, M[i, i])
+                az = 0.0
         else:
-            ax = math.atan2(-M[j, k], M[j, j])
-            ay = math.atan2(sy, M[i, i])
-            az = 0.0
-    else:
-        cy = math.sqrt(M[i, i] * M[i, i] + M[j, i] * M[j, i])
-        if cy > _EPS:
-            ax = math.atan2(M[k, j], M[k, k])
-            ay = math.atan2(-M[k, i], cy)
-            az = math.atan2(M[j, i], M[i, i])
-        else:
-            ax = math.atan2(-M[j, k], M[j, j])
-            ay = math.atan2(-M[k, i], cy)
-            az = 0.0
+            cy = torch.sqrt(M[i, i] * M[i, i] + M[j, i] * M[j, i])
+            if cy > _EPS:
+                ax = torch.atan2(M[k, j], M[k, k])
+                ay = torch.atan2(-M[k, i], cy)
+                az = torch.atan2(M[j, i], M[i, i])
+            else:
+                ax = torch.atan2(-M[j, k], M[j, j])
+                ay = torch.atan2(-M[k, i], cy)
+                az = 0.0
 
-    if parity:
-        ax, ay, az = -ax, -ay, -az
-    if frame:
-        ax, az = az, ax
-    return np.array([ax, ay, az])
+        if parity:
+            ax, ay, az = -ax, -ay, -az
+        if frame:
+            ax, az = az, ax
+        angle_list.append([ax, ay, az])
+    return torch.Tensor(angle_list)
+
+def euler_angles_from_matrix(mats):
+    # https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
+    # assume mats to be Nx3x3
+    theta1 = -torch.arcsin(mats[:, 2:3, 0:1])
+    theta2 = -theta1 + torch.pi
 
 def sanity_check():
     # dataset = read_from_folder()
@@ -412,8 +425,19 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
 
-joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")
-pose_6d_to_rotation_matrix(joint_posns)
+joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:5000, ...]
+pose_6d = pose_6d_to_rotation_matrix(joint_posns)
+print(pose_6d.shape)
+inv_euler = euler_angles_from_pose_6d(pose_6d)
+print(inv_euler.shape)
+print(torch.linalg.norm(inv_euler[0]-joint_posns[0]))
+
+# test_euler_angles = joint_posns[0:2, 3:6]
+# print(test_euler_angles)
+# test_rotation_mat = euler_xyz_to_rotation_matrix(test_euler_angles)
+# print(test_rotation_mat.shape)
+# inv_euler_angles = euler_from_matrix(test_rotation_mat)
+# print(inv_euler_angles)
 
 # seq_len = 50
 # target_offset = 50
