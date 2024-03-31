@@ -17,6 +17,23 @@ class TrajectoryDataset(Dataset):
         target = self.target_seqs[idx]
         # target = self.target_vels[idx]
         return input, target
+    
+class TrajectorySamplingDataset(Dataset):
+    def __init__(self, input_seqs, target_seqs, use_vel=True):
+        self.use_vel = use_vel
+        self.input_seqs = input_seqs
+        self.target_seqs = target_seqs
+
+    def __len__(self):
+        return len(self.input_seqs)
+
+    def __getitem__(self, idx):
+        input = self.input_seqs[idx]
+        # input = self.input_vels[idx]
+        target = self.target_seqs[idx]
+        # target = self.target_vels[idx]
+        return input, target
+
 
 class generate_train_data(Dataset):
     def __init__(self, data_set, source_seq_len, target_seq_len, sample_start=16):
