@@ -4,12 +4,15 @@
 import numpy as np
 import h5py
 import glob
-import pandas as pd
+# import pyarrow as pa
+# import pandas as pd
 # from model.datasets import TrajectoryDataset
 import csv
 import copy
-from pytorch3d.transforms import matrix_to_rotation_6d
+from pytorch3d.transforms import matrix_to_rotation_6d, rotation_6d_to_matrix
+import torch
 from datasets import TrajectoryDataset
+import math
 
 def read_from_hdf(hdf_path):
     """
@@ -21,7 +24,7 @@ def read_from_hdf(hdf_path):
         items = f.attrs.items()
         # print(f['data'].attrs['description'])
         data = f.get(group_keys[0])
-        return np.array(data)
+        return torch.Tensor(np.array(data))
     
 def read_from_csv(csv_path):
     """
@@ -115,31 +118,31 @@ def sequences_from_framedata(dataset, seq_len, target_offset=3):
     else:
         return [sequence_from_array(data, seq_len, target_offset) for data in dataset]
 
-def write_seqs_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/data/sequences_collect"):
-    """
-    Write a list of input-target sequence pairs to some file path. This method doesn't preserve info about the
-    original name identifier, so it should really only be used for temporary data storage. Serves as a kind of
-    cache. 
-    """
-    combined_data = []
-    for array in array_list:
-        combined_data.extend(array)
-    DF = pd.DataFrame(np.array(combined_data))
-    DF.to_csv(file_path)
+# def write_seqs_to_file(array_list, file_path="/Users/aaronzhao/human_prediction/LIDAR-human-prediction/data/sequences_collect"):
+#     """
+#     Write a list of input-target sequence pairs to some file path. This method doesn't preserve info about the
+#     original name identifier, so it should really only be used for temporary data storage. Serves as a kind of
+#     cache. 
+#     """
+#     combined_data = []
+#     for array in array_list:
+#         combined_data.extend(array)
+#     DF = pd.DataFrame(np.array(combined_data))
+#     DF.to_csv(file_path)
         
 
-def hdf_to_txt(hdf_path):
-    """
-    Read the data from a .hdf5 file into a numpy array and return it.
-    @hdf_path: The string pathname of the specified .hdf5 file.
-    """
-    with h5py.File(hdf_path, 'r') as f:
-        group_keys = list(f.keys())
-        items = f.attrs.items()
-        # print(f['data'].attrs['description'])
-        data = f.get(group_keys[0])
-        DF = pd.DataFrame(np.array(data))
-        DF.to_csv("data1.csv")
+# def hdf_to_txt(hdf_path):
+#     """
+#     Read the data from a .hdf5 file into a numpy array and return it.
+#     @hdf_path: The string pathname of the specified .hdf5 file.
+#     """
+#     with h5py.File(hdf_path, 'r') as f:
+#         group_keys = list(f.keys())
+#         items = f.attrs.items()
+#         # print(f['data'].attrs['description'])
+#         data = f.get(group_keys[0])
+#         DF = pd.DataFrame(np.array(data))
+#         DF.to_csv("data1.csv")
 
 
 
@@ -287,28 +290,107 @@ def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
     return dataset
 
 def euler_xyz_to_rotation_matrix(angles):
-    def R_y(theta):
-        return np.array([[np.cos(theta), 0, np.sin(theta)],
-                         [0, 1, 0],
-                         [-np.sin(theta), 0, np.cos(theta)]])
-    def R_z(theta):
-        return np.array([[np.cos(theta), -np.sin(theta), 0],
-                         [np.sin(theta), np.cos(theta), 0],
-                         [0, 0, 1]])
-    def R_x(theta):
-        return np.array([[1, 0, 0],
-                         [0, np.cos(theta), -np.sin(theta)],
-                         [0, np.sin(theta), np.cos(theta)]])
+    # :param angles must be 3xN
+    def R_y(thetas):
+        return torch.Tensor([[[torch.cos(theta), 0, torch.sin(theta)],
+                              [0, 1, 0],
+                              [-torch.sin(theta), 0, torch.cos(theta)]] for theta in thetas])
+    def R_z(thetas):
+        return torch.Tensor([[[torch.cos(theta), -torch.sin(theta), 0],
+                              [torch.sin(theta), torch.cos(theta), 0],
+                              [0, 0, 1]] for theta in thetas])
+    def R_x(thetas):
+        return torch.Tensor([[[1, 0, 0],
+                              [0, torch.cos(theta), -torch.sin(theta)],
+                              [0, torch.sin(theta), torch.cos(theta)]] for theta in thetas])
     X, Y, Z = R_x(angles[0]), R_y(angles[1]), R_z(angles[2])
     return Z@Y@X
 
-def joint_angles_to_rotation_matrix(joint_angles):
-    # joint angles are assumed to be 66xN, so we'll reshape to 3x22xN
-    joint_angles_reshaped = joint_angles.reshape((22, 3, -1))
-    base_translation = joint_angles_reshaped[0:1, :, :]
-    euler_angles = joint_angles_reshaped[1:, :, :]
-    rotation_mats = np.array([euler_xyz_to_rotation_matrix(angles) for angles in euler_angles])
-    print(rotation_mats.shape)
+def pose_6d_to_rotation_matrix(joint_angles):
+    # joint angles are assumed to be Nx66, so we'll reshape to 3x22xN
+    joint_angles_reshaped = joint_angles.reshape((-1, 22, 3))
+    base_translation = joint_angles_reshaped[:, 0, :]
+    euler_angles = joint_angles_reshaped[:, 1:, :]
+
+    joint_mats = [euler_xyz_to_rotation_matrix(euler_angles[:, i, :].T) for i in range(euler_angles.shape[1])]
+    continuous_6d = [matrix_to_rotation_6d(joint_mat) for joint_mat in joint_mats]
+    collected_6d = torch.cat(continuous_6d, dim=1)
+    pose_6d = torch.cat((base_translation, collected_6d), dim=1)
+    return pose_6d
+
+def rotation_matrix_from_pose_6d(base_with_pose_6d):
+    # pose is assumed to be Nx129
+    base_translation = base_with_pose_6d[:, 0:3]
+    pose_6d = base_with_pose_6d[:, 3:]
+    rotation_mats = [rotation_6d_to_matrix(pose) for pose in pose_6d]
+    return rotation_mats, base_translation
+
+def euler_from_matrix(matrix, axes='sxyz'):
+# https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
+    
+    # Return Euler angles from rotation matrix for specified axis sequence.
+    #
+    # axes : One of 24 axis sequences as string or encoded tuple
+    #
+    # Note that many Euler angle triplets can describe one matrix.
+    #
+    # >>> R0 = euler_matrix(1, 2, 3, 'syxz')
+    # >>> al, be, ga = euler_from_matrix(R0, 'syxz')
+    # >>> R1 = euler_matrix(al, be, ga, 'syxz')
+    # >>> np.allclose(R0, R1)
+    # True
+    # >>> angles = (4.0*math.pi) * (np.random.random(3) - 0.5)
+    # >>> for axes in _AXES2TUPLE.keys():
+    # ...    R0 = euler_matrix(axes=axes, *angles)
+    # ...    R1 = euler_matrix(axes=axes, *euler_from_matrix(R0, axes))
+    # ...    if not np.allclose(R0, R1): print axes, "failed"
+    _NEXT_AXIS = [1, 2, 0, 1]
+    _EPS = np.finfo(float).eps * 4.0
+    _AXES2TUPLE = {
+        'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
+        'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
+        'syxz': (1, 1, 0, 0), 'syxy': (1, 1, 1, 0), 'szxy': (2, 0, 0, 0),
+        'szxz': (2, 0, 1, 0), 'szyx': (2, 1, 0, 0), 'szyz': (2, 1, 1, 0),
+        'rzyx': (0, 0, 0, 1), 'rxyx': (0, 0, 1, 1), 'ryzx': (0, 1, 0, 1),
+        'rxzx': (0, 1, 1, 1), 'rxzy': (1, 0, 0, 1), 'ryzy': (1, 0, 1, 1),
+        'rzxy': (1, 1, 0, 1), 'ryxy': (1, 1, 1, 1), 'ryxz': (2, 0, 0, 1),
+        'rzxz': (2, 0, 1, 1), 'rxyz': (2, 1, 0, 1), 'rzyz': (2, 1, 1, 1)}
+    try:
+        firstaxis, parity, repetition, frame = _AXES2TUPLE[axes.lower()]
+    except (AttributeError, KeyError):
+        firstaxis, parity, repetition, frame = axes
+
+    i = firstaxis
+    j = _NEXT_AXIS[i + parity]
+    k = _NEXT_AXIS[i - parity + 1]
+
+    M = np.array(matrix, dtype=np.float64, copy=False)[:3, :3]
+    if repetition:
+        sy = math.sqrt(M[i, j] * M[i, j] + M[i, k] * M[i, k])
+        if sy > _EPS:
+            ax = math.atan2(M[i, j], M[i, k])
+            ay = math.atan2(sy, M[i, i])
+            az = math.atan2(M[j, i], -M[k, i])
+        else:
+            ax = math.atan2(-M[j, k], M[j, j])
+            ay = math.atan2(sy, M[i, i])
+            az = 0.0
+    else:
+        cy = math.sqrt(M[i, i] * M[i, i] + M[j, i] * M[j, i])
+        if cy > _EPS:
+            ax = math.atan2(M[k, j], M[k, k])
+            ay = math.atan2(-M[k, i], cy)
+            az = math.atan2(M[j, i], M[i, i])
+        else:
+            ax = math.atan2(-M[j, k], M[j, j])
+            ay = math.atan2(-M[k, i], cy)
+            az = 0.0
+
+    if parity:
+        ax, ay, az = -ax, -ay, -az
+    if frame:
+        ax, az = az, ax
+    return np.array([ax, ay, az])
 
 def sanity_check():
     # dataset = read_from_folder()
@@ -330,8 +412,8 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
 
-joint_posns = read_from_hdf("../humoro/mogaze/p1_1_human_data.hdf5")
-joint_angles_to_rotation_matrix(joint_posns)
+joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")
+pose_6d_to_rotation_matrix(joint_posns)
 
 # seq_len = 50
 # target_offset = 50
