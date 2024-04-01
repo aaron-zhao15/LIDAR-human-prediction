@@ -326,10 +326,36 @@ def euler_angles_from_pose_6d(base_with_pose_6d):
     base_translation = base_with_pose_6d[:, 0:3]
     pose_6d = base_with_pose_6d[:, 3:].reshape((-1, 21, 6))
     rotation_mats = [rotation_6d_to_matrix(pose_6d[:, i, :]) for i in range(pose_6d.shape[1])]
-    euler_angles = [euler_from_matrix(matrix) for matrix in rotation_mats]
+    euler_angles = [euler_angles_from_matrix(matrix) for matrix in rotation_mats]
     euler_angles = torch.cat(euler_angles, dim=1)
     full_euler_angles = torch.cat((base_translation, euler_angles), dim=1)
     return full_euler_angles
+
+def euler_angles_from_matrix(matrices):
+    # https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
+    # assume matrices to be Nx3x3
+    angle_list = []
+    for R in matrices:
+        angles = []
+        if R[2, 0] != 1 and R[2, 0] != -1:
+            theta1 = -torch.asin(R[2, 0])
+            theta2 = torch.pi - theta1
+            psi1 = torch.atan2(R[2, 1] / torch.cos(theta1), R[2, 2] / torch.cos(theta1))
+            psi2 = torch.atan2(R[2, 1] / torch.cos(theta2), R[2, 2] / torch.cos(theta2))
+            phi1 = torch.atan2(R[1, 0] / torch.cos(theta1), R[0, 0] / torch.cos(theta1))
+            phi2 = torch.atan2(R[1, 0] / torch.cos(theta2), R[0, 0] / torch.cos(theta2))
+            angles, angles2 = [psi1, theta1, phi1], [psi2, theta2, phi2]
+        else:
+            phi = torch.tensor(0.0)  # You can set phi to any value
+            if R[2, 0] == -1:
+                theta = torch.pi / 2
+                psi = phi + torch.atan2(R[0, 1], R[0, 2])
+            else:
+                theta = -torch.pi / 2
+                psi = -phi + torch.atan2(-R[0, 1], -R[0, 2])
+            angles = [psi, theta, phi]
+        angle_list.append(angles)
+    return torch.Tensor(angle_list)
 
 def euler_from_matrix(matrices, axes='sxyz'):
     # Return Euler angles from rotation matrix for specified axis sequence.
@@ -399,12 +425,6 @@ def euler_from_matrix(matrices, axes='sxyz'):
         angle_list.append([ax, ay, az])
     return torch.Tensor(angle_list)
 
-def euler_angles_from_matrix(mats):
-    # https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
-    # assume mats to be Nx3x3
-    theta1 = -torch.arcsin(mats[:, 2:3, 0:1])
-    theta2 = -theta1 + torch.pi
-
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
@@ -425,19 +445,19 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
 
-joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:5000, ...]
+joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
 pose_6d = pose_6d_to_rotation_matrix(joint_posns)
 print(pose_6d.shape)
 inv_euler = euler_angles_from_pose_6d(pose_6d)
 print(inv_euler.shape)
-print(torch.linalg.norm(inv_euler[0]-joint_posns[0]))
+print(torch.nn.functional.mse_loss(inv_euler, joint_posns))
 
-# test_euler_angles = joint_posns[0:2, 3:6]
+# test_euler_angles = joint_posns[0:1, 3:6]
 # print(test_euler_angles)
 # test_rotation_mat = euler_xyz_to_rotation_matrix(test_euler_angles)
 # print(test_rotation_mat.shape)
-# inv_euler_angles = euler_from_matrix(test_rotation_mat)
-# print(inv_euler_angles)
+# inv_euler_angles = euler_angles_from_matrix(test_rotation_mat[0])
+# print(inv_euler_angles[0])
 
 # seq_len = 50
 # target_offset = 50
