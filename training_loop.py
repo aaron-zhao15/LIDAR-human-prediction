@@ -47,9 +47,10 @@ hidden_size = 1024
 
 # dataset = data_utils.generate_data_from_csv_folder("../low_dim_data/", seq_len, target_offset, step_size)
 # dataset = data_utils.generate_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size, use_vel=False)
-dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
+# dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
+dataset = data_utils.generate_intent_data_from_person("humoro/mogaze/p2_1", step_size=step_size, sample_len=seq_len, offset_len=target_offset, use_vel=False)
 
 # print(dataset)
 
@@ -71,7 +72,7 @@ batch_size = 64
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
 # model = Decoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
-# model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
+model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
 model = Encoder_Decoder_GPT(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
@@ -82,6 +83,7 @@ lr=1e-4
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
+criterion = nn.CrossEntropyLoss()
 
 train, validate, test = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
 

@@ -6,12 +6,12 @@ import h5py
 import glob
 # import pyarrow as pa
 # import pandas as pd
-# from model.datasets import TrajectoryDataset
+from model.datasets import TrajectoryDataset, TrajectorySamplingDataset
+# from datasets import TrajectoryDataset, TrajectorySamplingDataset
 import csv
 import copy
 from pytorch3d.transforms import matrix_to_rotation_6d, rotation_6d_to_matrix
 import torch
-from datasets import TrajectoryDataset
 import math
 
 def read_from_hdf(hdf_path):
@@ -266,27 +266,39 @@ def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, us
     dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
     return dataset
 
-def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
-    joint_posns = [read_from_hdf(person_path+"_human_data.hdf5")]
+# def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
+#     joint_posns = [read_from_hdf(person_path+"_human_data.hdf5")]
+#     tasks = read_from_csv(person_path+"_instructions.csv")
+#     input_seqs, targets = [], []
+#     for joint_posn in joint_posns:
+#         traj_start = 0
+#         i_seqs = []
+#         for task in tasks:
+#             traj_end = int(task[0])
+#             # j_posn = downsample_data(joint_posn, step_size)
+#             j_posn = joint_posn
+#             j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+#             # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+#             # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+#             i_seq = copy.deepcopy(j_posn[traj_start:traj_end:step_size])
+#             i_seqs.append(i_seq)
+#             targets.append(int(task[1]))
+#             traj_start = traj_end
+#         input_seqs.extend(i_seqs)
+#         targets.extend(targets)
+#     dataset = TrajectoryDataset(input_seqs, targets, use_vel)
+#     return dataset
+
+def generate_intent_data_from_person(person_path, step_size=1, sample_len=60, offset_len=60, use_vel=False):
+    input_seqs = read_from_hdf(person_path+"_human_data.hdf5")
     tasks = read_from_csv(person_path+"_instructions.csv")
-    input_seqs, targets = [], []
-    for joint_posn in joint_posns:
-        traj_start = 0
-        i_seqs = []
-        for task in tasks:
-            traj_end = int(task[0])
-            # j_posn = downsample_data(joint_posn, step_size)
-            j_posn = joint_posn
-            j_vel = get_velocities(j_posn, dt=step_size*(1/120))
-            # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
-            # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
-            i_seq = copy.deepcopy(j_posn[traj_start:traj_end:step_size])
-            i_seqs.append(i_seq)
-            targets.append(int(task[1]))
-            traj_start = traj_end
-        input_seqs.extend(i_seqs)
-        targets.extend(targets)
-    dataset = TrajectoryDataset(input_seqs, targets, use_vel)
+    targets = torch.zeros(input_seqs.shape[0])
+    traj_start = 0
+    for task in tasks:
+        traj_end = int(task[0])
+        targets[traj_start:traj_end] = int(task[1])
+        traj_start = traj_end
+    dataset = TrajectorySamplingDataset(input_seqs, targets, step_size, sample_len, offset_len, use_vel)
     return dataset
 
 def euler_xyz_to_rotation_matrix(angles):
@@ -443,12 +455,17 @@ def sanity_check():
     print(input_sequence[3*20] == target_sequence[0])
     print(joint_posns[0])
 
-joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
-pose_6d = pose_6d_from_euler_angles(joint_posns)
-print(pose_6d.shape)
-inv_euler = euler_angles_from_pose_6d(pose_6d)
-print(inv_euler.shape)
-print(torch.nn.functional.mse_loss(inv_euler, joint_posns))
+
+# dataset = generate_intent_data_from_person("../humoro/mogaze/p2_1")
+# print(len(dataset))
+# print(dataset[500][0].shape)
+
+# joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
+# pose_6d = pose_6d_from_euler_angles(joint_posns)
+# print(pose_6d.shape)
+# inv_euler = euler_angles_from_pose_6d(pose_6d)
+# print(inv_euler.shape)
+# print(torch.nn.functional.mse_loss(inv_euler, joint_posns))
 
 # test_euler_angles = joint_posns[0:1, 3:6]
 # print(test_euler_angles)
