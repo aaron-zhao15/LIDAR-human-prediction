@@ -289,8 +289,6 @@ def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
     dataset = TrajectoryDataset(input_seqs, targets, use_vel)
     return dataset
 
-
-
 def euler_xyz_to_rotation_matrix(angles):
     # :param angles must be Nx3
     angles = angles.T
@@ -308,28 +306,6 @@ def euler_xyz_to_rotation_matrix(angles):
                               [0, torch.sin(theta), torch.cos(theta)]] for theta in thetas])
     X, Y, Z = R_x(angles[0]), R_y(angles[1]), R_z(angles[2])
     return Z@Y@X
-
-def pose_6d_to_rotation_matrix(joint_angles):
-    # joint angles are assumed to be Nx66, so we'll reshape to 3x22xN
-    joint_angles_reshaped = joint_angles.reshape((-1, 22, 3))
-    base_translation = joint_angles_reshaped[:, 0, :]
-    euler_angles = joint_angles_reshaped[:, 1:, :]
-
-    joint_mats = [euler_xyz_to_rotation_matrix(euler_angles[:, i, :]) for i in range(euler_angles.shape[1])]
-    continuous_6d = [matrix_to_rotation_6d(joint_mat) for joint_mat in joint_mats]
-    collected_6d = torch.cat(continuous_6d, dim=1)
-    pose_6d = torch.cat((base_translation, collected_6d), dim=1)
-    return pose_6d
-
-def euler_angles_from_pose_6d(base_with_pose_6d):
-    # pose is assumed to be Nx129
-    base_translation = base_with_pose_6d[:, 0:3]
-    pose_6d = base_with_pose_6d[:, 3:].reshape((-1, 21, 6))
-    rotation_mats = [rotation_6d_to_matrix(pose_6d[:, i, :]) for i in range(pose_6d.shape[1])]
-    euler_angles = [euler_angles_from_matrix(matrix) for matrix in rotation_mats]
-    euler_angles = torch.cat(euler_angles, dim=1)
-    full_euler_angles = torch.cat((base_translation, euler_angles), dim=1)
-    return full_euler_angles
 
 def euler_angles_from_matrix(matrices):
     # https://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
@@ -425,6 +401,28 @@ def euler_from_matrix(matrices, axes='sxyz'):
         angle_list.append([ax, ay, az])
     return torch.Tensor(angle_list)
 
+def pose_6d_from_euler_angles(joint_angles):
+    # joint angles are assumed to be Nx66, so we'll reshape to 3x22xN
+    joint_angles_reshaped = joint_angles.reshape((-1, 22, 3))
+    base_translation = joint_angles_reshaped[:, 0, :]
+    euler_angles = joint_angles_reshaped[:, 1:, :]
+
+    joint_mats = [euler_xyz_to_rotation_matrix(euler_angles[:, i, :]) for i in range(euler_angles.shape[1])]
+    continuous_6d = [matrix_to_rotation_6d(joint_mat) for joint_mat in joint_mats]
+    collected_6d = torch.cat(continuous_6d, dim=1)
+    pose_6d = torch.cat((base_translation, collected_6d), dim=1)
+    return pose_6d
+
+def euler_angles_from_pose_6d(base_with_pose_6d):
+    # pose is assumed to be Nx129
+    base_translation = base_with_pose_6d[:, 0:3]
+    pose_6d = base_with_pose_6d[:, 3:].reshape((-1, 21, 6))
+    rotation_mats = [rotation_6d_to_matrix(pose_6d[:, i, :]) for i in range(pose_6d.shape[1])]
+    euler_angles = [euler_angles_from_matrix(matrix) for matrix in rotation_mats]
+    euler_angles = torch.cat(euler_angles, dim=1)
+    full_euler_angles = torch.cat((base_translation, euler_angles), dim=1)
+    return full_euler_angles
+
 def sanity_check():
     # dataset = read_from_folder()
     # assert type(dataset) == list
@@ -446,7 +444,7 @@ def sanity_check():
     print(joint_posns[0])
 
 joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
-pose_6d = pose_6d_to_rotation_matrix(joint_posns)
+pose_6d = pose_6d_from_euler_angles(joint_posns)
 print(pose_6d.shape)
 inv_euler = euler_angles_from_pose_6d(pose_6d)
 print(inv_euler.shape)

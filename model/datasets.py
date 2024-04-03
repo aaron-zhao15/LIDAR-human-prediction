@@ -19,19 +19,19 @@ class TrajectoryDataset(Dataset):
         return input, target
     
 class TrajectorySamplingDataset(Dataset):
-    def __init__(self, input_seqs, target_seqs, use_vel=True):
+    def __init__(self, input_trajectory, target_dict, sample_len=60, offset_len=60, use_vel=True):
         self.use_vel = use_vel
-        self.input_seqs = input_seqs
-        self.target_seqs = target_seqs
+        self.input_trajectory = input_trajectory
+        self.target_dict = target_dict
+        self.sample_len = sample_len
+        self.offset_len = offset_len
 
     def __len__(self):
-        return len(self.input_seqs)
+        return len(self.input_trajectory-self.sample_len)
 
     def __getitem__(self, idx):
-        input = self.input_seqs[idx]
-        # input = self.input_vels[idx]
-        target = self.target_seqs[idx]
-        # target = self.target_vels[idx]
+        input = self.input_trajectory[idx:idx+self.sample_len, ...]
+        target = self.target_dict[idx]
         return input, target
 
 
