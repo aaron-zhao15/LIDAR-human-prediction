@@ -47,16 +47,16 @@ def read_hdf_from_folder(folder_path="../humoro/mogaze/"):
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
     @folder_path: The string pathname of the folder. Ends in /
     """
-    human_data_paths = glob.glob(folder_path + "*human_data.hdf5")
+    human_data_paths = sorted(glob.glob(folder_path + "*_human_data.hdf5"))
     data_set = [read_from_hdf(path) for path in human_data_paths]
     return data_set
 
-def read_csv_from_folder(folder_path="../low_dim_data/"):
+def read_csv_from_folder(folder_path="../humoro/mogaze/"):
     """
     Read the data from a folder containing .hdf5 files into a list of numpy arrays and return it.
     @folder_path: The string pathname of the folder. Ends in /
     """
-    human_data_paths = glob.glob(folder_path + "*.txt")
+    human_data_paths = sorted(glob.glob(folder_path + "*_instructions.csv"))
     data_set = [read_from_csv(path) for path in human_data_paths]
     return data_set
 
@@ -175,7 +175,7 @@ def generate_data_from_csv_folder(path, seq_len, target_offset, step_size, use_v
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
 
-    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
 def generate_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel=True):
@@ -196,7 +196,7 @@ def generate_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
     
-    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
 def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=True):
@@ -217,7 +217,7 @@ def generate_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_v
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
     
-    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
 def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_vel=False):
@@ -240,7 +240,7 @@ def generate_GT_data_from_hdf_file(path, seq_len, target_offset, step_size, use_
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
     
-    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
 def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, use_vel=False):
@@ -263,33 +263,26 @@ def generate_GT_data_from_hdf_folder(path, seq_len, target_offset, step_size, us
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
     
-    dataset = TrajectoryDataset(input_seqs, target_seqs, use_vel)
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
-# def generate_intent_data_from_person(person_path, step_size=1, use_vel=False):
-#     joint_posns = [read_from_hdf(person_path+"_human_data.hdf5")]
-#     tasks = read_from_csv(person_path+"_instructions.csv")
-#     input_seqs, targets = [], []
-#     for joint_posn in joint_posns:
-#         traj_start = 0
-#         i_seqs = []
-#         for task in tasks:
-#             traj_end = int(task[0])
-#             # j_posn = downsample_data(joint_posn, step_size)
-#             j_posn = joint_posn
-#             j_vel = get_velocities(j_posn, dt=step_size*(1/120))
-#             # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
-#             # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
-#             i_seq = copy.deepcopy(j_posn[traj_start:traj_end:step_size])
-#             i_seqs.append(i_seq)
-#             targets.append(int(task[1]))
-#             traj_start = traj_end
-#         input_seqs.extend(i_seqs)
-#         targets.extend(targets)
-#     dataset = TrajectoryDataset(input_seqs, targets, use_vel)
-#     return dataset
+def generate_intent_segments_from_folder(person_path, seq_len=60, step_size=60, use_vel=False):
+    joint_posns = read_hdf_from_folder(person_path)
+    tasks_lst = read_csv_from_folder(person_path)
+    input_seqs, targets = [], []
+    for i, joint_posn in enumerate(joint_posns):
+        tasks = tasks_lst[i]
+        for j, task in enumerate(tasks):
+            traj_start = int(task[0])
+            traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(joint_posn)
+            i_seq = copy.deepcopy(joint_posn[traj_start:traj_end:step_size])
+            input_seqs.append(i_seq)
+            label_encoding = torch.nn.functional.one_hot(torch.tensor(int(task[1])), num_classes=17)
+            targets.append(label_encoding)
+    dataset = TrajectoryDataset(input_seqs, targets, seq_len, use_vel)
+    return dataset
 
-def generate_intent_data_from_person(person_path, step_size=1, sample_len=60, offset_len=60, use_vel=False):
+def generate_intent_data_from_person(person_path, sample_len=60, offset_len=60, step_size=1, use_vel=False):
     input_seqs = read_from_hdf(person_path+"_human_data.hdf5")
     tasks = read_from_csv(person_path+"_instructions.csv")
     targets = torch.zeros(input_seqs.shape[0])
@@ -298,7 +291,7 @@ def generate_intent_data_from_person(person_path, step_size=1, sample_len=60, of
         traj_end = int(task[0])
         targets[traj_start:traj_end] = int(task[1])
         traj_start = traj_end
-    dataset = TrajectorySamplingDataset(input_seqs, targets, step_size, sample_len, offset_len, use_vel)
+    dataset = TrajectorySamplingDataset(input_seqs, targets, sample_len, offset_len, step_size, use_vel)
     return dataset
 
 def euler_xyz_to_rotation_matrix(angles):
@@ -456,9 +449,8 @@ def sanity_check():
     print(joint_posns[0])
 
 
-# dataset = generate_intent_data_from_person("../humoro/mogaze/p2_1")
-# print(len(dataset))
-# print(dataset[500][0].shape)
+# dataset = generate_intent_segments_from_folder("../humoro/mogaze/", seq_len=60, step_size=60)
+# print(min([data[1] for data in dataset]))
 
 # joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
 # pose_6d = pose_6d_from_euler_angles(joint_posns)

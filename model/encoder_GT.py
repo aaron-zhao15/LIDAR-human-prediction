@@ -144,3 +144,64 @@ class Encoder_GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
             idx_tot = torch.cat((idx_tot, idx_next), dim=1)
         return idx, idx_tot
+
+
+class Encoder_GPT_classifier(nn.Module):
+    """ GPT Language Model """
+
+    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, num_classes, pdrop=0.1, device='cpu'):
+        super().__init__()
+        assert vocab_size is not None
+        assert block_size is not None
+        self.block_size = block_size
+        self.transformer = nn.ModuleDict(dict(
+            # wte = nn.Embedding(vocab_size, n_embd, device=device),
+            # not really an embedding but a linear layer to help match shapes
+            wte = nn.Linear(vocab_size, n_embd, device=device),
+            wpe = nn.Embedding(block_size, n_embd, device=device),
+            # this uses the positional embedding specified in https://arxiv.org/pdf/2003.08111.pdf
+            # wpe = PositionalEncoding(d_model=n_embd, dropout=0.1, max_len=block_size, device=device),
+            drop = nn.Dropout(pdrop),
+            h = nn.ModuleList([BertBlock(n_head, n_embd, pdrop=0.1, device=device) for _ in range(n_layer)]),
+            ln_f = nn.LayerNorm(n_embd, device=device),
+        ))
+        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
+        self.lm_classifier = nn.Linear(n_embd*block_size, num_classes, bias=False, device=device)
+        # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
+        self.apply(self._init_weights)
+        for pn, p in self.named_parameters():
+            if pn.endswith('c_proj.weight'):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * n_layer))
+
+        # report number of parameters (note we don't count the decoder parameters in lm_head)
+        n_params = sum(p.numel() for p in self.transformer.parameters())
+        print("number of parameters: %.2fM" % (n_params/1e6,))
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.LayerNorm):
+            torch.nn.init.zeros_(module.bias)
+            torch.nn.init.ones_(module.weight)
+
+    def forward(self, idx):
+        device = idx.device
+        b, t, s = idx.size()
+        assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
+        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
+
+        # forward the GPT model itself
+        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
+        x = self.transformer.drop(tok_emb + pos_emb)
+        for block in self.transformer.h:
+            x = block(x)
+        x = self.transformer.ln_f(x)
+        logits = self.lm_head(x)
+        proj = self.lm_classifier(torch.flatten(x, start_dim=1))
+        probabilities = proj.softmax(dim=1)
+        return probabilities, logits

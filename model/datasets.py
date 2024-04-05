@@ -1,25 +1,32 @@
 import numpy as np
 import copy
+import torch
 from torch.utils.data import Dataset
 
 class TrajectoryDataset(Dataset):
-    def __init__(self, input_seqs, target_seqs, use_vel=True):
+    def __init__(self, input_seqs, targets, seq_len, use_vel=True):
         self.use_vel = use_vel
         self.input_seqs = input_seqs
-        self.target_seqs = target_seqs
+        self.targets = targets
+        self.seq_len = seq_len
 
     def __len__(self):
         return len(self.input_seqs)
 
     def __getitem__(self, idx):
-        input = self.input_seqs[idx]
-        # input = self.input_vels[idx]
-        target = self.target_seqs[idx]
-        # target = self.target_vels[idx]
-        return input, target
+        input_seq = self.input_seqs[idx]
+        target = self.targets[idx]
+        # padding
+        if len(input_seq) < self.seq_len:
+            n = self.seq_len-len(input_seq)
+            padding = torch.tile(input_seq[0], (n,1))
+            input_seq = torch.cat((padding, input_seq), dim=0)
+        if len(input_seq) > self.seq_len:
+            input_seq = input_seq[-self.seq_len:, ...]
+        return input_seq, target
     
 class TrajectorySamplingDataset(Dataset):
-    def __init__(self, input_trajectory, target_arr, step_size=1, sample_len=60, offset_len=60, use_vel=True):
+    def __init__(self, input_trajectory, target_arr, sample_len=60, offset_len=60, step_size=1, use_vel=True):
         self.use_vel = use_vel
         self.input_trajectory = input_trajectory
         self.target_arr = target_arr

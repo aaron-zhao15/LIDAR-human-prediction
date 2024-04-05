@@ -7,7 +7,7 @@ from model.datasets import TrajectoryDataset
 from model.models import *
 from model.individual_TF import IndividualTF
 from model.decoder_GT import Decoder_GPT
-from model.encoder_GT import Encoder_GPT
+from model.encoder_GT import Encoder_GPT, Encoder_GPT_classifier
 from model.encoder_decoder_GT import Encoder_Decoder_GPT
 
 import torch
@@ -28,10 +28,11 @@ else:
     device = torch.device("cpu")
 
 joint_dims = 66
-seq_len = 60
+seq_len = 200
 target_offset = 60
-step_size = 60
+step_size = 10
 hidden_size = 1024
+num_classes = 17
 # hidden_size = 64
 
 # joint_posns = mogaze_utils.read_from_hdf("../mogaze_data/p1_1_human_data.hdf5")
@@ -50,8 +51,8 @@ hidden_size = 1024
 # dataset = data_utils.generate_data_from_hdf_file("humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_file("humoro/mogaze/p1_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
-dataset = data_utils.generate_intent_data_from_person("humoro/mogaze/p2_1", step_size=step_size, sample_len=seq_len, offset_len=target_offset, use_vel=False)
-
+# dataset = data_utils.generate_intent_data_from_person("humoro/mogaze/p2_1", step_size=step_size, sample_len=seq_len, offset_len=target_offset, use_vel=False)
+dataset = data_utils.generate_intent_segments_from_folder("humoro/mogaze/", seq_len=seq_len, step_size=step_size)
 # print(dataset)
 
 
@@ -72,17 +73,17 @@ batch_size = 64
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
 # model = Decoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
-model = Encoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
-model = Encoder_Decoder_GPT(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
+model = Encoder_GPT_classifier(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, num_classes=num_classes, pdrop=0.1, device=device)
+# model = Encoder_Decoder_GPT(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
 
 # Define hyperparameters
-n_epochs = 100
-lr=1e-4
+n_epochs = 500
+lr=10
 
 # Define Loss, Optimizer
-criterion = nn.MSELoss()
+# criterion = nn.MSELoss()
 criterion = nn.CrossEntropyLoss()
 
 train, validate, test = torch.utils.data.random_split(dataset, [0.6, 0.2, 0.2])
@@ -99,8 +100,8 @@ epoch_losses, evaluations = train_utils.train_standard(n_epochs, model, criterio
 # epoch_losses, evaluations = train_utils.train_GT(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_ED_GT_offset60_direct.gz', epoch_losses)
-np.savetxt('model/trained_model_data/evaluations_ED_GT_offset60_direct.gz', evaluations)
-torch.save(model.state_dict(), 'model/trained_model_data/ED_GT_offset60_direct_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_E_GT_C.gz', epoch_losses)
+np.savetxt('model/trained_model_data/evaluations_E_GT_C.gz', evaluations)
+torch.save(model.state_dict(), 'model/trained_model_data/E_GT_C_statedict.pt')
 
 
