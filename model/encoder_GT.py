@@ -201,7 +201,6 @@ class Encoder_GPT_classifier(nn.Module):
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
-        logits = self.lm_head(x)
-        proj = self.lm_classifier(torch.flatten(x, start_dim=1))
-        probabilities = proj.softmax(dim=1)
-        return probabilities, logits
+        encoder_fw = self.lm_head(x)
+        logits = self.lm_classifier(torch.flatten(x, start_dim=1))
+        return logits, encoder_fw

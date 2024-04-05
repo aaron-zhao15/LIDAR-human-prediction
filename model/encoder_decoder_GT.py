@@ -66,3 +66,25 @@ class Encoder_Decoder_GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
             idx_tot = torch.cat((idx_tot, idx_next), dim=1)
         return idx, idx_tot
+    
+class Encoder_Decoder_Classifier(nn.Module):
+    """ GPT Language Model """
+
+    def __init__(self, n_layer, n_head, n_embd, vocab_size, block_size, num_classes, pdrop=0.1, device='cpu'):
+        super().__init__()
+        assert vocab_size is not None
+        assert block_size is not None
+        self.block_size = block_size
+
+        self.encoder = Encoder_GPT(n_layer, n_head, n_embd, vocab_size, block_size, pdrop, device)
+        self.decoder = Decoder_GPT(n_layer, n_head, n_embd, vocab_size, block_size, pdrop, device)
+        self.lm_classifier = nn.Linear(block_size*vocab_size, num_classes, bias=False, device=device)
+
+    def forward(self, idx):
+        outputs_enc, _ = self.encoder(idx)
+
+        # Decoder
+        outputs_dec, _ = self.decoder(outputs_enc)
+        logits = self.lm_classifier(torch.flatten(outputs_dec, start_dim=1))
+
+        return logits, outputs_enc

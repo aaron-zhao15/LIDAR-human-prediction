@@ -22,7 +22,8 @@ class TrajectoryDataset(Dataset):
             padding = torch.tile(input_seq[0], (n,1))
             input_seq = torch.cat((padding, input_seq), dim=0)
         if len(input_seq) > self.seq_len:
-            input_seq = input_seq[-self.seq_len:, ...]
+            # input_seq = input_seq[-self.seq_len:, ...]
+            input_seq = input_seq[0:self.seq_len, ...]
         return input_seq, target
     
 class TrajectorySamplingDataset(Dataset):

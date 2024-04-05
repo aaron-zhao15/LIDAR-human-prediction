@@ -276,6 +276,7 @@ def generate_intent_segments_from_folder(person_path, seq_len=60, step_size=60, 
             traj_start = int(task[0])
             traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(joint_posn)
             i_seq = copy.deepcopy(joint_posn[traj_start:traj_end:step_size])
+            i_seq = pose_6d_from_euler_angles(i_seq)
             input_seqs.append(i_seq)
             label_encoding = torch.nn.functional.one_hot(torch.tensor(int(task[1])), num_classes=17)
             targets.append(label_encoding)
@@ -450,7 +451,7 @@ def sanity_check():
 
 
 # dataset = generate_intent_segments_from_folder("../humoro/mogaze/", seq_len=60, step_size=60)
-# print(min([data[1] for data in dataset]))
+# print([data[1] for data in dataset])
 
 # joint_posns = read_from_hdf("../humoro/mogaze/p2_1_human_data.hdf5")[0:500, ...]
 # pose_6d = pose_6d_from_euler_angles(joint_posns)
