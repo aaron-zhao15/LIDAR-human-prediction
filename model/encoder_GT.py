@@ -166,7 +166,7 @@ class Encoder_GPT_classifier(nn.Module):
             ln_f = nn.LayerNorm(n_embd, device=device),
         ))
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
-        self.lm_classifier = nn.Linear(n_embd*block_size, num_classes, bias=False, device=device)
+        self.lm_classifier = nn.Linear(n_embd, num_classes, bias=False, device=device)
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
@@ -202,5 +202,6 @@ class Encoder_GPT_classifier(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
         encoder_fw = self.lm_head(x)
-        logits = self.lm_classifier(torch.flatten(x, start_dim=1))
+        # logits = self.lm_classifier(torch.flatten(x, start_dim=1))
+        logits = self.lm_classifier(x)
         return logits, encoder_fw

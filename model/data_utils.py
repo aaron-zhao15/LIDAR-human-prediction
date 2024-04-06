@@ -276,7 +276,7 @@ def generate_intent_segments_from_folder(person_path, seq_len=60, step_size=60, 
             traj_start = int(task[0])
             traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(joint_posn)
             i_seq = copy.deepcopy(joint_posn[traj_start:traj_end:step_size])
-            i_seq = pose_6d_from_euler_angles(i_seq)
+            # i_seq = pose_6d_from_euler_angles(i_seq)
             input_seqs.append(i_seq)
             label_encoding = torch.nn.functional.one_hot(torch.tensor(int(task[1])), num_classes=17)
             targets.append(label_encoding)

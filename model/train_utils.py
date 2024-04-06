@@ -237,6 +237,7 @@ def train_classifier(n_epochs, model, criterion, optimizer, train_loader, valida
             x, label = x.to(device), label.to(device)
             counter += 1
             out, _ = model(x)
+            out = out[:, -1, ...]
             # accuracy calculation
             predictions = torch.argmax(out, axis=1)
             true_labels = torch.argmax(label, axis=1)
@@ -279,6 +280,7 @@ def evaluate_classifier_accuracy(model, test_loader, criterion, device):
             x, label = x.to(device), label.to(device)
             # Forward pass to make predictions using the model
             out, hidden = model(x)
+            out = out[:, -1, ...]
             predictions = torch.argmax(out, axis=1)
             true_labels = torch.argmax(label, axis=1)
             # Calculate accuracy for the batch
