@@ -166,10 +166,11 @@ class Encoder_GPT_classifier(nn.Module):
             ln_f = nn.LayerNorm(n_embd, device=device),
         ))
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
-        self.lm_classifier = nn.Sequential(nn.Linear(n_embd, n_embd),
+        # self.lm_classifier = nn.Linear(n_embd, num_classes, bias=False, device=device)
+        self.lm_classifier = nn.Sequential(nn.Linear(n_embd, n_embd, device=device),
                                 nn.Dropout(0.5),
                                 nn.Tanh(),
-                                nn.Linear(n_embd, num_classes))
+                                nn.Linear(n_embd, num_classes, device=device))
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
@@ -205,7 +206,7 @@ class Encoder_GPT_classifier(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
         encoder_fw = self.lm_head(x)
-        cls_output = x[:, 0, :]
+        cls_output = x[:, -1, :]
         logits = self.lm_classifier(cls_output)
         return logits, encoder_fw
     

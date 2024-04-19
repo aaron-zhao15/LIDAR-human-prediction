@@ -295,6 +295,23 @@ def generate_intent_data_from_person(person_path, sample_len=60, offset_len=60, 
     dataset = TrajectorySamplingDataset(input_seqs, targets, sample_len, offset_len, step_size, use_vel)
     return dataset
 
+def generate_seq_to_seq(person_path, seq_len=60, step_size=60, use_vel=False):
+    joint_posns = read_hdf_from_folder(person_path)
+    tasks_lst = read_csv_from_folder(person_path)
+    input_seqs, targets = [], []
+    for i, joint_posn in enumerate(joint_posns):
+        tasks = tasks_lst[i]
+        for j, task in enumerate(tasks):
+            traj_start = int(task[0])
+            traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(joint_posn)
+            i_seq = copy.deepcopy(joint_posn[traj_start:traj_end:step_size])
+            # i_seq = pose_6d_from_euler_angles(i_seq)
+            input_seqs.append(i_seq)
+            label_encoding = torch.nn.functional.one_hot(torch.tensor(int(task[1])), num_classes=17)
+            targets.append(label_encoding)
+    dataset = TrajectoryDataset(input_seqs, targets, seq_len, use_vel)
+    return dataset
+
 def euler_xyz_to_rotation_matrix(angles):
     # :param angles must be Nx3
     angles = angles.T
