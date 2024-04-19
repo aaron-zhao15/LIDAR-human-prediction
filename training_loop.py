@@ -7,7 +7,7 @@ from model.datasets import TrajectoryDataset
 from model.models import *
 from model.individual_TF import IndividualTF
 from model.decoder_GT import Decoder_GPT
-from model.encoder_GT import Encoder_GPT, Encoder_GPT_classifier
+from model.encoder_GT import Encoder_GPT, Encoder_GPT_classifier, BiLSTM, Transformer
 from model.encoder_decoder_GT import Encoder_Decoder_GPT, Encoder_Decoder_Classifier
 
 import torch
@@ -73,17 +73,31 @@ batch_size = 64
 
 # block_size should be either seq_len or seq_len*2-1, depending on the dataset format
 # model = Decoder_GPT(n_layer=6, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
-# model = Encoder_GPT_classifier(n_layer=6, n_head=6, n_embd=192, vocab_size=129, block_size=seq_len, num_classes=num_classes, pdrop=0.1, device=device)
+model = Encoder_GPT_classifier(n_layer=6, n_head=6, n_embd=192, vocab_size=66, block_size=seq_len, num_classes=num_classes, pdrop=0.1, device=device)
 # model = Encoder_Decoder_GPT(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_dims, block_size=seq_len, pdrop=0.1, device=device)
-model = Encoder_Decoder_Classifier(n_layer=3, n_head=6, n_embd=192, vocab_size=129, block_size=seq_len, num_classes=num_classes, pdrop=0.1, device=device)
+# model = Encoder_Decoder_Classifier(n_layer=3, n_head=6, n_embd=192, vocab_size=129, block_size=seq_len, num_classes=num_classes, pdrop=0.1, device=device)
 # model = torch.load('TransformerModel4.pt')
 # model.load_state_dict(torch.load('model/trained_model_data/GT_1_small_statedict.pt'))
-
+config = {'input_dim': 66,
+            'num_layers': 6,
+            'lstm_hidden': 1024,
+            'lstm_dropout': 0.1,
+            'fc_dim': 1024,
+            'num_classes': 17}
+config = {'input_dim': 66,
+                  'model_name': 'bert',
+                  'config_name': 'bert',
+                  'config_dict': dict(num_hidden_layers=6),
+                  'use_pretrained': True,
+                  'max_video_len': seq_len,
+                  'fc_dim': 1024,
+                  'num_classes': 17}
+model = Transformer(config, device)
 
 
 # Define hyperparameters
 n_epochs = 1000
-lr=1e-2
+lr=1e-3
 
 # Define Loss, Optimizer
 # criterion = nn.MSELoss()

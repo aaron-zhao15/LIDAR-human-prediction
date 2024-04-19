@@ -1,3 +1,6 @@
 [submodule "humoro"]
 	path = humoro
 	url = https://github.com/PhilippJKratzer/humoro.git
+[submodule "ActionBERT"]
+	path = ActionBERT
+	url = https://github.com/Axe--/ActionBERT?tab=readme-ov-file
