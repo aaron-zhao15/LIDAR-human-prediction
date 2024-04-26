@@ -63,9 +63,9 @@ def read_csv_from_folder(folder_path="../humoro/mogaze/"):
 
 def get_velocities(joint_positions, dt=1/120):
     if type(joint_positions) == np.ndarray:
-        return (joint_positions[1:]-joint_positions[:-1])/dt
+        return (joint_positions[int(120*dt):]-joint_positions[:int(-120*dt)])/dt
     else:
-        return [(data[1:]-data[:-1])/dt for data in joint_positions]
+        return [(data[int(120*dt):]-data[:int(-120*dt)])/dt for data in joint_positions]
 
 def downsample_data(dataset, frequency=20):
     """
@@ -95,13 +95,10 @@ def sequence_from_array(data_array, seq_len, target_offset, step_size=20):
     @step_size: step size is used to specify the frequency of sampling.
     """
     input_sequences, target_sequences = [], []
-    for start_index in range(len(data_array)-((seq_len-1)+target_offset)*step_size):
-        input_sequence = [data_array[start_index+(i)*step_size] for i in range(seq_len)]
+    for start_index in range(len(data_array)-(target_offset+2*(seq_len*step_size))):
+        input_sequence = data_array[start_index:start_index+(seq_len*step_size):step_size]
         # the assumption here is that the input and target sequence lengths are equal
-        target_sequence = [data_array[start_index+(i+target_offset)*step_size] for i in range(seq_len)]
-        
-        input_sequence = np.array(input_sequence)
-        target_sequence = np.array(target_sequence)
+        target_sequence = data_array[start_index+target_offset+(seq_len*step_size):start_index+target_offset+2*(seq_len*step_size):step_size]
 
         input_sequences.append(input_sequence)
         target_sequences.append(target_sequence)
@@ -295,21 +292,28 @@ def generate_intent_data_from_person(person_path, sample_len=60, offset_len=60, 
     dataset = TrajectorySamplingDataset(input_seqs, targets, sample_len, offset_len, step_size, use_vel)
     return dataset
 
-def generate_seq_to_seq(person_path, seq_len=60, step_size=60, use_vel=False):
-    joint_posns = read_hdf_from_folder(person_path)
-    tasks_lst = read_csv_from_folder(person_path)
-    input_seqs, targets = [], []
-    for i, joint_posn in enumerate(joint_posns):
-        tasks = tasks_lst[i]
-        for j, task in enumerate(tasks):
-            traj_start = int(task[0])
-            traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(joint_posn)
-            i_seq = copy.deepcopy(joint_posn[traj_start:traj_end:step_size])
-            # i_seq = pose_6d_from_euler_angles(i_seq)
-            input_seqs.append(i_seq)
-            label_encoding = torch.nn.functional.one_hot(torch.tensor(int(task[1])), num_classes=17)
-            targets.append(label_encoding)
-    dataset = TrajectoryDataset(input_seqs, targets, seq_len, use_vel)
+def generate_seq_to_seq(path, seq_len, target_offset, step_size, use_vel=False):
+    joint_posns = read_hdf_from_folder(path)
+    input_seqs, target_seqs = [], []
+    for joint_posn in joint_posns:
+        # j_posn = downsample_data(joint_posn, step_size)
+        
+        j_posn = pose_6d_from_euler_angles(joint_posn)
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+        # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
+        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        if use_vel:
+            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        i_seqs = np.append(i_seqs, t_seqs, axis=1)[:, :-1, :]
+        t_seqs = np.append(np.zeros((t_seqs.shape[0], t_seqs.shape[1]-1, t_seqs.shape[2])), t_seqs, axis=1)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+    
+    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
     return dataset
 
 def euler_xyz_to_rotation_matrix(angles):

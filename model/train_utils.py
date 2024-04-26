@@ -179,8 +179,8 @@ def train_standard(n_epochs, model, criterion, optimizer, train_loader, validate
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
-            if counter%200 == 0:
-                print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
+            # if counter%200 == 0:
+            #     print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
         epoch_losses.append(np.mean(losses))
         evaluation = evaluate_standard(model, validate_loader, criterion, device)
         evaluations.append(evaluation)

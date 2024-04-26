@@ -167,7 +167,7 @@ class Encoder_GPT_classifier(nn.Module):
         ))
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False, device=device)
         # self.lm_classifier = nn.Linear(n_embd, num_classes, bias=False, device=device)
-        self.lm_classifier = nn.Sequential(nn.Linear(n_embd, n_embd, device=device),
+        self.lm_classifier = nn.Sequential(nn.Linear(n_embd*block_size, n_embd, device=device),
                                 nn.Dropout(0.5),
                                 nn.Tanh(),
                                 nn.Linear(n_embd, num_classes, device=device))
@@ -206,7 +206,8 @@ class Encoder_GPT_classifier(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
         encoder_fw = self.lm_head(x)
-        cls_output = x[:, -1, :]
+        # cls_output = x[:, -1, :]
+        cls_output = torch.flatten(x, start_dim=1)
         logits = self.lm_classifier(cls_output)
         return logits, encoder_fw
     
