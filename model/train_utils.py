@@ -220,6 +220,121 @@ def evaluate_standard(model, test_loader, criterion, device):
 
     return average_mse
 
+def train_dual(n_epochs, model, mse_crit, ce_crit, optimizer, train_loader, validate_loader, test_loader, device):
+    gamma1 = 1
+    gamma2 = 0.1
+    epoch_times = []
+    training_losses, training_accuracies = [], []
+    validation_losses, validation_accuracies = [], []
+    for epoch in range(1, n_epochs + 1):
+        model = model.train()
+        
+        start_time = time.perf_counter()
+        # h = model.init_hidden(batch_size)
+        losses = []
+        counter = 0
+        accuracies = torch.zeros(0, device=device)
+        for x, label, task in train_loader:
+            x, label, task = x.float(), label.float(), task.float()
+            x, label, task = x.to(device), label.to(device), task.to(device)
+            counter += 1
+            decoder_out, encoder_logits = model(x)
+            # accuracy calculation
+            predictions = torch.argmax(encoder_logits, axis=1)
+            true_labels = torch.argmax(task, axis=1)
+            accuracy = predictions==true_labels
+            accuracies = torch.cat((accuracies, accuracy))
+
+            mse_loss = mse_crit(decoder_out, label)
+            ce_loss = ce_crit(encoder_logits, task)
+            loss = gamma1*mse_loss + gamma2*ce_loss
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+            if counter%200 == 0:
+                print("Epoch {}......Step: {}/{}....... Average Loss for Epoch: {}".format(epoch, counter, len(train_loader), np.mean(losses)))
+        training_losses.append(torch.mean(torch.Tensor(losses)).cpu())
+        training_accuracies.append(torch.mean(torch.Tensor(accuracies)).cpu())
+        task_accuracy, average_mse = evaluate_dual(model, validate_loader, mse_crit, ce_crit, device)
+        task_accuracy, average_mse = task_accuracy.cpu(), average_mse.cpu()
+        validation_losses.append(average_mse)
+        validation_accuracies.append(task_accuracy)
+        current_time = time.perf_counter()
+        epoch_accuracy = torch.mean(torch.Tensor(accuracies)).cpu()
+        if epoch > 0:
+            print("Epoch {}/{} Done, Total Loss: {}, Epoch accuracy: {}, Validation Accuracy: {}".format(epoch, n_epochs, np.mean(losses), epoch_accuracy, task_accuracy))
+            print("Validation loss: {}".format(average_mse))
+            print("Total Time Elapsed: {} seconds".format(str(current_time-start_time)))
+        epoch_times.append(current_time-start_time)
+    print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
+    task_accuracy, average_mse = evaluate_dual(model, test_loader, mse_crit, ce_crit, device)
+    print("Test Loss: {}, Test Accuracy: {}".format(average_mse, task_accuracy))
+    validation_losses.append(average_mse)
+    validation_accuracies.append(task_accuracy)
+    # [training_losses, training_accuracies], [validation_losses, validation_accuracies]
+    return training_losses, validation_losses
+
+def evaluate_dual(model, test_loader, mse_crit, ce_crit, device):
+    # Set the model in evaluation mode (no gradient computation)
+    model = model.eval()
+
+    # Initialize a variable to store MSE
+    accuracies = torch.zeros(0, device=device)
+    losses = []
+
+    gamma1 = 1
+    gamma2 = 0.1
+
+    # Iterate through the test DataLoader
+    with torch.no_grad():
+        for x, label, task in test_loader:
+            x, label, task = x.float(), label.float(), task.float()
+            x, label, task = x.to(device), label.to(device), task.to(device)
+            # Forward pass to make predictions using the model
+            decoder_out, encoder_logits = model(x)
+            # masked label and output comparison
+            # out = out[:, -1, ...]
+            predictions = torch.argmax(encoder_logits, axis=1)
+            true_labels = torch.argmax(task, axis=1)
+            # Calculate accuracy for the batch
+            accuracy = predictions==true_labels
+            accuracies = torch.cat((accuracies, accuracy))
+            
+            mse_loss = mse_crit(decoder_out, label)
+            ce_loss = ce_crit(encoder_logits, task)
+            loss = gamma1*mse_loss + gamma2*ce_loss
+            losses.append(loss)
+            
+    # Calculate the overall evaluation metric (average MSE)
+    task_accuracy = torch.mean(torch.Tensor(accuracies))
+    average_mse = torch.mean(torch.Tensor(losses))
+    return task_accuracy, average_mse
+
+def evaluate_standard(model, test_loader, criterion, device):
+    # Set the model in evaluation mode (no gradient computation)
+    model = model.eval()
+
+    # Initialize a variable to store MSE
+    mse_values = []
+
+    # Iterate through the test DataLoader
+    with torch.no_grad():
+        for x, label in test_loader:
+            x, label = x.to(device).float(), label.to(device).float()
+            
+            # Forward pass to make predictions using the model
+            out, hidden = model(x)
+            # Calculate the MSE for the batch
+            loss = criterion(out, label)
+            mse = loss.item()
+            # Append the MSE value to the list
+            mse_values.append(mse)
+
+    # Calculate the overall evaluation metric (average MSE)
+    average_mse = np.mean(mse_values)
+
+    return average_mse
 
 def train_classifier(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device):
     epoch_times = []

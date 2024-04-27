@@ -6,8 +6,8 @@ import h5py
 import glob
 # import pyarrow as pa
 # import pandas as pd
-from model.datasets import TrajectoryDataset, TrajectorySamplingDataset
-# from datasets import TrajectoryDataset, TrajectorySamplingDataset
+from model.datasets import *
+# from datasets import *
 import csv
 import copy
 from pytorch3d.transforms import matrix_to_rotation_6d, rotation_6d_to_matrix
@@ -103,6 +103,35 @@ def sequence_from_array(data_array, seq_len, target_offset, step_size=20):
         input_sequences.append(input_sequence)
         target_sequences.append(target_sequence)
     return [np.array(input_sequences), np.array(target_sequences)]
+
+def sequence_and_task_from_array(data_array, tasks, seq_len, target_offset, step_size=20):
+    """
+    For implementation, avoid using this method and instead use sequences_from_framedata for consistent type handling.
+
+    From a single array of data, parse the sequential data into tuples of sequences, (input_seq, target_seq).
+    There's an assumption made, that the input and target sequence lengths are both equal. If the use case
+    requires a different length for each sequence, a different method needs to be used.
+    @joint_positions: The data in the form of a numpy ndarray.
+    @seq_len: The length of the input and target sequences.
+    @target_offset: How far the target sequence is shifted from the start of the input sequence. You can think
+    about this as how many time steps into the future are we modeling.
+    @step_size: step size is used to specify the frequency of sampling.
+    """
+    tasks_filled = np.zeros(len(data_array))
+    for j, task in enumerate(tasks):
+        traj_start = int(task[0])
+        traj_end = int(tasks[j+1][0]) if j < len(tasks)-1 else len(data_array)
+        tasks_filled[traj_start:traj_end] = task[1]
+    input_sequences, target_sequences, task_list = [], [], []
+    for start_index in range(len(data_array)-(target_offset+2*(seq_len*step_size))):
+        input_sequence = data_array[start_index:start_index+(seq_len*step_size):step_size]
+        # the assumption here is that the input and target sequence lengths are equal
+        target_sequence = data_array[start_index+target_offset+(seq_len*step_size):start_index+target_offset+2*(seq_len*step_size):step_size]
+
+        input_sequences.append(input_sequence)
+        target_sequences.append(target_sequence)
+        task_list.append(tasks_filled[start_index])
+    return [input_sequences, target_sequences, task_list]
 
 def sequences_from_framedata(dataset, seq_len, target_offset=3):
     """
@@ -289,31 +318,30 @@ def generate_intent_data_from_person(person_path, sample_len=60, offset_len=60, 
         traj_end = int(task[0])
         targets[traj_start:traj_end] = int(task[1])
         traj_start = traj_end
-    dataset = TrajectorySamplingDataset(input_seqs, targets, sample_len, offset_len, step_size, use_vel)
+    dataset = TrajectoryDataset(input_seqs, targets, sample_len, offset_len, step_size, use_vel)
     return dataset
 
-def generate_seq_to_seq(path, seq_len, target_offset, step_size, use_vel=False):
-    joint_posns = read_hdf_from_folder(path)
-    input_seqs, target_seqs = [], []
-    for joint_posn in joint_posns:
+def generate_seq_to_seq_with_task(person_path, seq_len, target_offset, step_size, use_vel=False):
+    joint_angles = [read_from_hdf(person_path+"_human_data.hdf5")]
+    tasks = [read_from_csv(person_path+"_instructions.csv")]
+    input_seqs, target_seqs, tasks_list = [], [], []
+    for i, joint_posn in enumerate(joint_angles):
         # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
         
-        j_posn = pose_6d_from_euler_angles(joint_posn)
         j_vel = get_velocities(j_posn, dt=step_size*(1/120))
         # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
         j_posn = j_posn[:-1]
-        [i_seqs, t_seqs] = sequence_from_array(j_posn, seq_len, target_offset, step_size)
-        [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
-        if use_vel:
-            i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
-            t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
-        i_seqs = np.append(i_seqs, t_seqs, axis=1)[:, :-1, :]
-        t_seqs = np.append(np.zeros((t_seqs.shape[0], t_seqs.shape[1]-1, t_seqs.shape[2])), t_seqs, axis=1)
+        [i_seqs, t_seqs, task_lst] = sequence_and_task_from_array(j_posn, tasks[0], seq_len, target_offset, step_size)
+        # [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        # if use_vel:
+        #     i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+        #     t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
         input_seqs.extend(i_seqs)
         target_seqs.extend(t_seqs)
-    
-    dataset = TrajectoryDataset(input_seqs, target_seqs, seq_len, use_vel)
+        tasks_list.extend(task_lst)
+    dataset = TrajectoryWithSeqTaskDataset(input_seqs, target_seqs, tasks_list, seq_len)
     return dataset
 
 def euler_xyz_to_rotation_matrix(angles):
@@ -488,16 +516,17 @@ def sanity_check():
 # inv_euler_angles = euler_angles_from_matrix(test_rotation_mat[0])
 # print(inv_euler_angles[0])
 
-# seq_len = 50
-# target_offset = 50
-# step_size = 20
+seq_len = 560
+target_offset = 60
+step_size = 20
 # dataset = generate_data_from_hdf_file("../humoro/mogaze/p2_1_human_data.hdf5", seq_len, target_offset, step_size, use_vel=False)
 
 # dataset = generate_intent_data_from_person("../humoro/mogaze/p1_1")
 
 # generate_GT_data_from_hdf_file("../humoro/mogaze/p1_1_human_data.hdf5", seq_len=50, target_offset=50, step_size=1)
 
-
+# dataset = generate_seq_to_seq_with_task("../humoro/mogaze/p1_1", seq_len, target_offset, step_size)
+# print(len(dataset))
 # sanity_check()
 
 

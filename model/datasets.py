@@ -26,22 +26,39 @@ class TrajectoryDataset(Dataset):
             input_seq = input_seq[0:self.seq_len, ...]
         return input_seq, target
     
-class TrajectorySamplingDataset(Dataset):
-    def __init__(self, input_trajectory, target_arr, sample_len=60, offset_len=60, step_size=1, use_vel=True):
+class TrajectoryWithSeqTaskDataset(Dataset):
+    def __init__(self, input_seqs, target_seqs, task_labels, seq_len=60, num_classes=17, use_vel=False):
         self.use_vel = use_vel
-        self.input_trajectory = input_trajectory
-        self.target_arr = target_arr
-        self.step_size = step_size
-        self.sample_len = sample_len
-        self.offset_len = offset_len
+        self.input_seqs = input_seqs
+        self.target_seqs = target_seqs
+        self.task_labels = task_labels
+        self.seq_len = seq_len
+        self.num_classes = num_classes
 
     def __len__(self):
-        return len(self.input_trajectory-self.sample_len*self.step_size)
+        return len(self.input_seqs)
 
     def __getitem__(self, idx):
-        input = self.input_trajectory[idx:idx+self.sample_len:self.step_size, ...]
-        target = self.target_arr[idx]
-        return input, target
+        input_seq = self.input_seqs[idx]
+        target_seq = self.target_seqs[idx]
+        task = self.task_labels[idx]
+        # padding
+        if len(input_seq) < self.seq_len:
+            n = self.seq_len-len(input_seq)
+            padding = torch.tile(input_seq[0], (n,1))
+            input_seq = torch.cat((padding, input_seq), dim=0)
+        if len(input_seq) > self.seq_len:
+            # input_seq = input_seq[-self.seq_len:, ...]
+            input_seq = input_seq[0:self.seq_len, ...]
+        if len(target_seq) < self.seq_len:
+            n = self.seq_len-len(target_seq)
+            padding = torch.tile(target_seq[0], (n,1))
+            target_seq = torch.cat((padding, target_seq), dim=0)
+        if len(target_seq) > self.seq_len:
+            # input_seq = input_seq[-self.seq_len:, ...]
+            target_seq = target_seq[0:self.seq_len, ...]
+        task = torch.nn.functional.one_hot(torch.tensor(int(task)), self.num_classes)
+        return input_seq, target_seq, task
 
 
 class generate_train_data(Dataset):
