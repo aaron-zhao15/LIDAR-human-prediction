@@ -222,7 +222,7 @@ def evaluate_standard(model, test_loader, criterion, device):
 
 def train_dual(n_epochs, model, mse_crit, ce_crit, optimizer, train_loader, validate_loader, test_loader, device):
     gamma1 = 1
-    gamma2 = 0.1
+    gamma2 = 1
     epoch_times = []
     training_losses, training_accuracies = [], []
     validation_losses, validation_accuracies = [], []
@@ -269,11 +269,12 @@ def train_dual(n_epochs, model, mse_crit, ce_crit, optimizer, train_loader, vali
         epoch_times.append(current_time-start_time)
     print("Total Training Time: {} seconds".format(str(sum(epoch_times))))
     task_accuracy, average_mse = evaluate_dual(model, test_loader, mse_crit, ce_crit, device)
+    task_accuracy, average_mse = task_accuracy.cpu(), average_mse.cpu()
     print("Test Loss: {}, Test Accuracy: {}".format(average_mse, task_accuracy))
     validation_losses.append(average_mse)
     validation_accuracies.append(task_accuracy)
     # [training_losses, training_accuracies], [validation_losses, validation_accuracies]
-    return training_losses, validation_losses
+    return [training_losses, training_accuracies], [validation_losses, validation_accuracies]
 
 def evaluate_dual(model, test_loader, mse_crit, ce_crit, device):
     # Set the model in evaluation mode (no gradient computation)
@@ -284,7 +285,7 @@ def evaluate_dual(model, test_loader, mse_crit, ce_crit, device):
     losses = []
 
     gamma1 = 1
-    gamma2 = 0.1
+    gamma2 = 1
 
     # Iterate through the test DataLoader
     with torch.no_grad():

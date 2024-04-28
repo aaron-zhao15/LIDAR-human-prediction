@@ -53,7 +53,8 @@ num_classes = 17
 # dataset = data_utils.generate_GT_data_from_hdf_folder("humoro/mogaze/", seq_len, target_offset, step_size)
 # dataset = data_utils.generate_intent_data_from_person("humoro/mogaze/p2_1", step_size=step_size, sample_len=seq_len, offset_len=target_offset, use_vel=False)
 # dataset = data_utils.generate_intent_segments_from_folder("humoro/mogaze/", seq_len=seq_len, step_size=step_size)
-dataset = data_utils.generate_seq_to_seq_with_task("humoro/mogaze/p1_1", seq_len, target_offset, step_size)
+# dataset = data_utils.generate_seq_to_seq_with_task("humoro/mogaze/p1_1", seq_len, target_offset, step_size)
+dataset = data_utils.generate_seq_to_seq_with_task_from_folder("humoro/mogaze/", seq_len, target_offset, step_size)
 # print(len(dataset))
 
 
@@ -98,7 +99,7 @@ model = Encoder_Decoder_Dual(n_layer=3, n_head=6, n_embd=192, vocab_size=joint_d
 
 
 # Define hyperparameters
-n_epochs = 100
+n_epochs = 200
 lr=1e-6
 
 # Define Loss, Optimizer
@@ -121,8 +122,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 training_res, validation_res = train_utils.train_dual(n_epochs, model, mse_crit, ce_crit, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_ED_GT_p1_1_dual.gz', training_res)
-np.savetxt('model/trained_model_data/evaluations_ED_GT_p1_1_dual.gz', validation_res)
-torch.save(model.state_dict(), 'model/trained_model_data/ED_GT_p1_1_dual_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_EDD_full.gz', training_res)
+np.savetxt('model/trained_model_data/evaluations_EDD_full.gz', validation_res)
+torch.save(model.state_dict(), 'model/trained_model_data/EDD_full_statedict.pt')
 
 

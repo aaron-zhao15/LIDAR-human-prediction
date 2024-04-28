@@ -124,6 +124,8 @@ def sequence_and_task_from_array(data_array, tasks, seq_len, target_offset, step
         tasks_filled[traj_start:traj_end] = task[1]
     input_sequences, target_sequences, task_list = [], [], []
     for start_index in range(len(data_array)-(target_offset+2*(seq_len*step_size))):
+        if tasks_filled[start_index] != tasks_filled[start_index+target_offset+2*(seq_len*step_size)]:
+            continue
         input_sequence = data_array[start_index:start_index+(seq_len*step_size):step_size]
         # the assumption here is that the input and target sequence lengths are equal
         target_sequence = data_array[start_index+target_offset+(seq_len*step_size):start_index+target_offset+2*(seq_len*step_size):step_size]
@@ -334,6 +336,29 @@ def generate_seq_to_seq_with_task(person_path, seq_len, target_offset, step_size
         # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
         j_posn = j_posn[:-1]
         [i_seqs, t_seqs, task_lst] = sequence_and_task_from_array(j_posn, tasks[0], seq_len, target_offset, step_size)
+        # [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
+        # if use_vel:
+        #     i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
+        #     t_seqs = np.append(t_seqs, t_vel_seqs, axis=2)
+        input_seqs.extend(i_seqs)
+        target_seqs.extend(t_seqs)
+        tasks_list.extend(task_lst)
+    dataset = TrajectoryWithSeqTaskDataset(input_seqs, target_seqs, tasks_list, seq_len)
+    return dataset
+
+def generate_seq_to_seq_with_task_from_folder(person_path, seq_len, target_offset, step_size, use_vel=False):
+    joint_posns = read_hdf_from_folder(person_path)
+    tasks_lst = read_csv_from_folder(person_path)
+    input_seqs, target_seqs, tasks_list = [], [], []
+    for i, joint_posn in enumerate(joint_posns):
+        # j_posn = downsample_data(joint_posn, step_size)
+        j_posn = joint_posn
+        
+        j_vel = get_velocities(j_posn, dt=step_size*(1/120))
+        # j_posn, (j_posn_mean, j_posn_std) = normalize(j_posn)
+        # j_vel, (j_vel_mean, j_vel_std) = normalize(j_vel)
+        j_posn = j_posn[:-1]
+        [i_seqs, t_seqs, task_lst] = sequence_and_task_from_array(j_posn, tasks_lst[i], seq_len, target_offset, step_size)
         # [i_vel_seqs, t_vel_seqs] = sequence_from_array(j_vel, seq_len, target_offset, step_size)
         # if use_vel:
         #     i_seqs = np.append(i_seqs, i_vel_seqs, axis=2)
