@@ -30,7 +30,7 @@ else:
 joint_dims = 66
 seq_len = 60
 target_offset = 60
-step_size = 60
+step_size = 20
 hidden_size = 1024
 num_classes = 17
 # hidden_size = 64
