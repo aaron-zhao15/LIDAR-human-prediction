@@ -30,7 +30,7 @@ else:
 joint_dims = 66
 seq_len = 60
 target_offset = 60
-step_size = 20
+step_size = 60
 hidden_size = 1024
 num_classes = 17
 # hidden_size = 64
@@ -122,8 +122,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 # epoch_losses, evaluations = train_utils.train_pvred(n_epochs, model, criterion, optimizer, train_loader, validate_loader, test_loader, device)
 training_res, validation_res = train_utils.train_dual(n_epochs, model, mse_crit, ce_crit, optimizer, train_loader, validate_loader, test_loader, device)
 
-np.savetxt('model/trained_model_data/epoch_losses_EDD_full.gz', training_res)
-np.savetxt('model/trained_model_data/evaluations_EDD_full.gz', validation_res)
-torch.save(model.state_dict(), 'model/trained_model_data/EDD_full_statedict.pt')
+np.savetxt('model/trained_model_data/epoch_losses_EDD_full_60step.gz', training_res)
+np.savetxt('model/trained_model_data/evaluations_EDD_full_60step.gz', validation_res)
+torch.save(model.state_dict(), 'model/trained_model_data/EDD_full_60step_statedict.pt')
 
 
